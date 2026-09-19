@@ -33,6 +33,26 @@ SHA-256:
 
 The SHA-pinned baseline is also recorded in [BASELINE.json](BASELINE.json).
 
+## Exact-reproduction rule
+
+The confirmed ZIP is the source of truth.
+
+When there are **no reviewed files under `overrides/` and no active entries in
+`deletions.txt`**, the build does **not** unpack and recompress the archive.
+It copies the pinned working baseline byte-for-byte to
+`SlimefunLegacyRP.zip`.
+
+GitHub Actions then verifies:
+
+- the baseline SHA-1;
+- the baseline SHA-256;
+- the generated ZIP SHA-1;
+- the generated ZIP SHA-256;
+- a byte-for-byte `cmp` against the downloaded baseline.
+
+That means a normal no-change build must reproduce the exact tested artifact,
+not merely a ZIP with equivalent contents.
+
 ## Included content
 
 The pack keeps Slimefun as the primary resource source and currently includes
@@ -78,6 +98,9 @@ Future changes are made in three stages:
 3. After the candidate is confirmed in-game, publish that exact tested artifact
    through the release workflow. The release workflow validates the checksum
    again and uploads it unchanged as `SlimefunLegacyRP.zip`.
+
+If no override or deletion is supplied, step 2 outputs the exact current
+working ZIP byte-for-byte.
 
 The build command used by Actions is equivalent to:
 
