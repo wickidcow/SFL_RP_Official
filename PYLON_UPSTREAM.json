@@ -1,0 +1,7 @@
+{
+  "repository": "pylonmc/pylon-resource-pack",
+  "branch": "main",
+  "accepted_ref": "a7b49d81cd2c640395df376be3af8490958bd54c",
+  "accepted_version": "0.7.1",
+  "notes": "Accepted upstream Pylon resource-pack baseline. Update only after the generated SFL candidate has been tested in-game."
+}
