@@ -29,13 +29,27 @@ def extract_safe(zip_path: Path, destination: Path) -> None:
                 shutil.copyfileobj(src, dst)
 
 
-def apply_deletions(root: Path, delete_list: Path | None) -> None:
+def deletion_entries(delete_list: Path | None) -> list[str]:
     if delete_list is None or not delete_list.exists():
-        return
+        return []
+    entries: list[str] = []
     for raw in delete_list.read_text(encoding="utf-8").splitlines():
         entry = raw.strip()
         if not entry or entry.startswith("#"):
             continue
+        safe_member(entry)
+        entries.append(entry)
+    return entries
+
+
+def override_files(overrides: Path | None) -> list[Path]:
+    if overrides is None or not overrides.exists():
+        return []
+    return sorted(path for path in overrides.rglob("*") if path.is_file())
+
+
+def apply_deletions(root: Path, entries: list[str]) -> None:
+    for entry in entries:
         rel = safe_member(entry)
         target = root.joinpath(*rel.parts)
         if target.is_dir():
@@ -44,12 +58,10 @@ def apply_deletions(root: Path, delete_list: Path | None) -> None:
             target.unlink()
 
 
-def apply_overrides(root: Path, overrides: Path | None) -> None:
-    if overrides is None or not overrides.exists():
+def apply_overrides(root: Path, overrides: Path | None, files: list[Path]) -> None:
+    if overrides is None:
         return
-    for source in sorted(overrides.rglob("*")):
-        if not source.is_file():
-            continue
+    for source in files:
         rel = source.relative_to(overrides)
         target = root / rel
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -57,7 +69,9 @@ def apply_overrides(root: Path, overrides: Path | None) -> None:
 
 
 def write_deterministic_zip(root: Path, output: Path) -> None:
-    # Fixed timestamps make identical input trees produce identical ZIP bytes in CI.
+    # Fixed timestamps make identical changed input trees deterministic in CI.
+    # A true no-op never reaches this function: the known-good ZIP is copied
+    # byte-for-byte instead so its exact tested artifact hash is preserved.
     epoch = (2026, 1, 1, 0, 0, 0)
     output.parent.mkdir(parents=True, exist_ok=True)
     if output.exists():
@@ -81,7 +95,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Build a future SlimefunLegacyRP.zip by layering reviewed changes "
-            "over a known-good release."
+            "over a known-good release. With no reviewed changes, the baseline "
+            "ZIP is copied byte-for-byte."
         )
     )
     parser.add_argument("base", type=Path, help="Known-good SlimefunLegacyRP.zip")
@@ -100,15 +115,32 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    deletions = deletion_entries(args.delete_list)
+    overrides = override_files(args.overrides)
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+
+    # Critical regression guard: a no-op build must be the exact tested ZIP,
+    # not merely a logically equivalent re-compressed archive.
+    if not deletions and not overrides:
+        if args.output.exists():
+            args.output.unlink()
+        shutil.copyfile(args.base, args.output)
+        print(f"No reviewed changes: copied {args.base} byte-for-byte to {args.output}")
+        return 0
+
     with tempfile.TemporaryDirectory(prefix="sfl-rp-") as temp:
         root = Path(temp) / "pack"
         root.mkdir()
         extract_safe(args.base, root)
-        apply_deletions(root, args.delete_list)
-        apply_overrides(root, args.overrides)
+        apply_deletions(root, deletions)
+        apply_overrides(root, args.overrides, overrides)
         write_deterministic_zip(root, args.output)
 
-    print(args.output)
+    print(
+        f"Built reviewed candidate with {len(overrides)} override file(s) "
+        f"and {len(deletions)} deletion(s): {args.output}"
+    )
     return 0
 
 
