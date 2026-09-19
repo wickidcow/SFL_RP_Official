@@ -1,64 +1,90 @@
-# Slimefun Legacy Resource Pack (Unofficial)
+# SFL IAWeapons Resource Pack
 
-Unofficial resource pack distribution for **Slimefun Legacy**.
+Clean, focused **IAWeapons-only** resource pack for Minecraft Java **1.21.11+**.
 
-## Player download
+This repository intentionally no longer publishes the old full Slimefun/Pylon/Rebar texture bundle. The current release pack contains only IAWeapons and the files required for IAWeapons to render correctly.
 
-Use the permanent latest-release URL:
-
-```text
-https://github.com/wickidcow/SFL_ResourePack_UnOfficial/releases/latest/download/SlimefunLegacyRP.zip
-```
-
-Minecraft clients should receive **SlimefunLegacyRP.zip** only.
-
-The matching server-side model mapping belongs at:
+## Latest download
 
 ```text
-plugins/Slimefun/item-models.yml
+https://github.com/wickidcow/SFL_RP_Official/releases/latest/download/SFL_IAWeaponsRP.zip
 ```
-
-The YAML mapping is server-side configuration and is not part of the resource-pack download sent to players.
-
-A reference copy is kept in this repository at [`server/item-models.yml`](server/item-models.yml). Slimefun Legacy bundles the matching mapping so the live server file is created/updated under `plugins/Slimefun/item-models.yml`.
-
-## Automatic pack repair
-
-Before each release, GitHub Actions repairs the trimmed source pack so retained Slimefun/Pylon/Rebar assets do not point at namespaces that were removed during trimming.
-
-The release pipeline currently:
-
-- restores addon texture references from internal aliases such as `_slimefun:`, `_pylon:`, and `_b_pylon:` to their retained namespaces;
-- sends copied vanilla model textures back to Minecraft's built-in `minecraft:` namespace instead of missing `_minecraft:` resources;
-- repairs vanilla model parents such as `item/generated`, `item/handheld`, and `block/cube_all`;
-- supplies transparent helper textures used by generated models;
-- validates the reachable modern item-model graph and fails the release if a model or texture is still missing;
-- replaces `pack.png` with the purple Slimefun Legacy icon.
-
-This specifically prevents the magenta/black missing-texture squares that can otherwise appear on both Slimefun items and ordinary vanilla blocks on current 26.x clients.
-
-## Releasing an update
-
-1. Replace/update the source resource pack.
-2. Increase the version in `VERSION`.
-3. Push the change to `main`.
-4. GitHub Actions downloads the source ZIP, repairs modern namespace/model references, validates the final pack, applies the purple pack icon, and publishes it as `SlimefunLegacyRP.zip` on the corresponding release.
-
-The publish workflow can also be run manually with a custom ZIP source URL.
-
-## Current bootstrap source
-
-The initial GitHub release is bootstrapped from:
-
-```text
-http://overlord.kicks-ass.org:8163/SlimefunLegacyRP.zip
-```
-
-After the GitHub release is available, Slimefun Legacy can use the permanent GitHub `releases/latest/download` URL for player delivery.
 
 ## Compatibility
 
-The current pack/model mapping has been verified in use with Minecraft **1.21.11 through 26.3**.
+- Minecraft Java **1.21.11** — resource pack format 75
+- Minecraft **26.1 / 26.1.2** — format 84
+- Minecraft **26.2** — format 88
+- Minecraft **26.3** — current 97.x resource-pack structure
+- Uses the modern `assets/minecraft/items/` item-definition system
+- Designed to remain loadable on later formats through `min_format: 75`
+
+## What is included
+
+The generated ZIP contains:
+
+- `assets/iaweapons/`
+  - IAWeapons models
+  - IAWeapons textures
+  - IAWeapons sounds
+- four vanilla carrier item definitions required by IAWeapons:
+  - `crossbow`
+  - `golden_sword`
+  - `snowball`
+  - `stick`
+- ItemsAdder-generated firework-launcher item-context helper models
+- a minimal modern item atlas containing only vanilla item sprites + IAWeapons sprites
+- the updated purple Slimefun-style `pack.png`
+
+## What is removed
+
+The release ZIP does **not** include:
+
+- Slimefun core models/textures
+- Pylon
+- Rebar / RebarMobs
+- InfinityExpansion / InfinityExpansion2
+- Supreme
+- FluffyMachines
+- Cultivation
+- ExoticGarden
+- Gastronomicon
+- other unrelated addon/resource-pack namespaces
+- ModelEngine content
+
+This prevents the pack from overriding unrelated vanilla or Slimefun item models.
+
+## Preserved IAWeapons CustomModelData
+
+| Carrier | CustomModelData | IAWeapons model |
+| --- | ---: | --- |
+| Crossbow | 10000 | Shotgun |
+| Crossbow | 10001 | Firework Launcher |
+| Golden Sword | 1981823 | AK47 |
+| Golden Sword | 1981824 | Hand Gun |
+| Golden Sword | 1981828 | Revolver |
+| Snowball | 9928315 | Grenade |
+| Stick | 10029 | Clip |
+| Stick | 10079 | Shotgun Cartridge |
+| Stick | 10080 | Projectile |
+
+## Release process
+
+The GitHub Action downloads a source pack, runs `tools/build_iaweapons_pack.py`, validates the resulting resource graph, and publishes:
+
+```text
+SFL_IAWeaponsRP.zip
+```
+
+The build fails if a removed addon namespace is still referenced or if the expected IAWeapons CustomModelData mapping changes.
+
+The default bootstrap source for the 2.0 clean rebuild is the prior v1.0.1 full resource-pack release. A different source ZIP can be supplied manually when IAWeapons assets need to be refreshed.
+
+## Local build
+
+```bash
+python tools/build_iaweapons_pack.py source-pack.zip SFL_IAWeaponsRP.zip
+```
 
 ## License
 
