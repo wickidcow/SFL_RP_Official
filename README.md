@@ -1,90 +1,80 @@
-# SFL IAWeapons Resource Pack
+# Slimefun Legacy Resource Pack
 
-Clean, focused **IAWeapons-only** resource pack for Minecraft Java **1.21.11+**.
+Combined resource pack for **Slimefun Legacy + Pylon + IAWeapons** on Minecraft Java **1.21.11+**.
 
-This repository intentionally no longer publishes the old full Slimefun/Pylon/Rebar texture bundle. The current release pack contains only IAWeapons and the files required for IAWeapons to render correctly.
-
-## Latest download
+## Latest player download
 
 ```text
-https://github.com/wickidcow/SFL_RP_Official/releases/latest/download/SFL_IAWeaponsRP.zip
+https://github.com/wickidcow/SFL_RP_Official/releases/latest/download/SlimefunLegacyRP.zip
 ```
 
-## Compatibility
+## Included
 
-- Minecraft Java **1.21.11** — resource pack format 75
-- Minecraft **26.1 / 26.1.2** — format 84
-- Minecraft **26.2** — format 88
-- Minecraft **26.3** — current 97.x resource-pack structure
-- Uses the modern `assets/minecraft/items/` item-definition system
-- Designed to remain loadable on later formats through `min_format: 75`
+- Slimefun Legacy core models/textures
+- Pylon models/textures
+- IAWeapons models/textures/sounds
+- required modern `assets/minecraft/items/` definitions
+- required Pylon/IAWeapons atlas entries
+- required IAWeapons internal helper models
+- Slimefun armor/elytra equipment assets
+- preserved player-head/skull special fallbacks
+- purple Slimefun resource-pack icon
 
-## What is included
+## Removed
 
-The generated ZIP contains:
+Unrelated addon namespaces are intentionally excluded, including:
 
-- `assets/iaweapons/`
-  - IAWeapons models
-  - IAWeapons textures
-  - IAWeapons sounds
-- four vanilla carrier item definitions required by IAWeapons:
-  - `crossbow`
-  - `golden_sword`
-  - `snowball`
-  - `stick`
-- ItemsAdder-generated firework-launcher item-context helper models
-- a minimal modern item atlas containing only vanilla item sprites + IAWeapons sprites
-- the updated purple Slimefun-style `pack.png`
-
-## What is removed
-
-The release ZIP does **not** include:
-
-- Slimefun core models/textures
-- Pylon
 - Rebar / RebarMobs
-- InfinityExpansion / InfinityExpansion2
 - Supreme
+- InfinityExpansion
 - FluffyMachines
 - Cultivation
 - ExoticGarden
 - Gastronomicon
-- other unrelated addon/resource-pack namespaces
-- ModelEngine content
+- other unrelated generated ItemsAdder/ModelEngine content
 
-This prevents the pack from overriding unrelated vanilla or Slimefun item models.
+## CustomModelData merge
 
-## Preserved IAWeapons CustomModelData
+This pack must support two different modern CustomModelData styles at the same time:
 
-| Carrier | CustomModelData | IAWeapons model |
-| --- | ---: | --- |
-| Crossbow | 10000 | Shotgun |
-| Crossbow | 10001 | Firework Launcher |
-| Golden Sword | 1981823 | AK47 |
-| Golden Sword | 1981824 | Hand Gun |
-| Golden Sword | 1981828 | Revolver |
-| Snowball | 9928315 | Grenade |
-| Stick | 10029 | Clip |
-| Stick | 10079 | Shotgun Cartridge |
-| Stick | 10080 | Projectile |
+- **Slimefun + IAWeapons:** numeric/float CustomModelData
+- **Pylon:** string CustomModelData
 
-## Release process
+The build nests Pylon's string selector around the Slimefun/IAWeapons numeric range dispatcher so all three can safely share vanilla carrier items without overwriting one another.
 
-The GitHub Action downloads a source pack, runs `tools/build_iaweapons_pack.py`, validates the resulting resource graph, and publishes:
+## Head / skull compatibility
+
+The merged item definitions preserve Minecraft's native special head fallbacks, including the player-head model:
 
 ```text
-SFL_IAWeaponsRP.zip
+minecraft:head
+kind: player
 ```
 
-The build fails if a removed addon namespace is still referenced or if the expected IAWeapons CustomModelData mapping changes.
+That prevents normal player heads and head-backed guide/category icons from being replaced by missing-model placeholders when no custom mapping matches.
 
-The default bootstrap source for the 2.0 clean rebuild is the prior v1.0.1 full resource-pack release. A different source ZIP can be supplied manually when IAWeapons assets need to be refreshed.
+## Compatibility
 
-## Local build
+- Minecraft Java 1.21.11+
+- modern `assets/minecraft/items/` item definition format
+- validated against the current 26.3 resource-pack layout
+- `pack_format: 75`
+- `min_format: 75`
+
+## Sources
+
+The automated build currently uses:
+
+- the previously validated Slimefun/IAWeapons source release from this repository
+- the official Pylon resource pack release from `pylonmc/pylon-resource-pack`
+
+## Build
 
 ```bash
-python tools/build_iaweapons_pack.py source-pack.zip SFL_IAWeaponsRP.zip
+python tools/build_combined_pack.py slimefun-source.zip pylon-source.zip SlimefunLegacyRP.zip
 ```
+
+The build validates that Slimefun, Pylon, and IAWeapons mappings are all present, that the player-head fallback survived the merge, and that removed addon namespaces are not referenced.
 
 ## License
 
