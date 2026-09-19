@@ -9,11 +9,11 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (for example 1.0.1). Leave blank to use VERSION."
+        description: "Release version (for example 1.0.2). Leave blank to use VERSION."
         required: false
         type: string
       source_url:
-        description: "ZIP source URL"
+        description: "Source ZIP URL before Legacy repair"
         required: false
         default: "http://overlord.kicks-ass.org:8163/SlimefunLegacyRP.zip"
         type: string
@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   publish:
-    name: Publish SlimefunLegacyRP.zip
+    name: Repair and publish SlimefunLegacyRP.zip
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -57,20 +57,30 @@ jobs:
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "source_url=$SOURCE_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Download resource pack
+      - name: Download source resource pack
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --location --retry 3 --retry-delay 2 \
             "${{ steps.release.outputs.source_url }}" \
-            --output SlimefunLegacyRP.zip
+            --output SlimefunLegacyRP.source.zip
 
-      - name: Validate resource pack ZIP
+      - name: Repair modern model and texture references
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/repair_pack.py \
+            SlimefunLegacyRP.source.zip \
+            SlimefunLegacyRP.zip
+
+      - name: Validate final resource pack ZIP
         shell: bash
         run: |
           set -euo pipefail
           unzip -t SlimefunLegacyRP.zip
           unzip -l SlimefunLegacyRP.zip | grep -q "pack.mcmeta"
+          unzip -l SlimefunLegacyRP.zip | grep -q "pack.png"
+          sha256sum SlimefunLegacyRP.zip
 
       - name: Publish GitHub release
         shell: bash
@@ -81,12 +91,18 @@ jobs:
         run: |
           set -euo pipefail
 
+          NOTES="Unofficial Slimefun Legacy resource pack release $VERSION.
+
+          The release pipeline repairs stripped internal namespace references, validates the reachable 26.x model/texture graph, and applies the purple Slimefun Legacy pack icon.
+
+          Player download asset: SlimefunLegacyRP.zip"
+
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" SlimefunLegacyRP.zip --clobber
           else
             gh release create "$TAG" SlimefunLegacyRP.zip \
               --title "Slimefun Legacy Resource Pack $TAG" \
-              --notes "Unofficial Slimefun Legacy resource pack release $VERSION. Player download asset: SlimefunLegacyRP.zip" \
+              --notes "$NOTES" \
               --latest
           fi
 
