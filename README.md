@@ -141,11 +141,11 @@ The Pylon importer:
 The accepted Pylon baseline is currently **0.7.1** at commit
 `a7b49d81cd2c640395df376be3af8490958bd54c`.
 
-The confirmed SFL ZIP hashes remain pinned even when its source asset is not
-available from GitHub. Automation will not silently fall back to an older
-release; in that state it can still detect an upstream Pylon change and emit an
-upstream diff, but it will not create a combined candidate until the exact
-tested baseline ZIP is available.
+The confirmed SFL ZIP hashes remain pinned. Automation first tries the pinned
+v4.0.0 asset URL and then the permanent latest-download URL. A downloaded ZIP
+is accepted only when **both** its SHA-1 and SHA-256 match the confirmed
+baseline. If neither URL serves those exact bytes, the Pylon workflow stops
+rather than falling back to an older or different resource pack.
 
 ## Regression checks
 
