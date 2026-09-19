@@ -4,6 +4,5 @@
   "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.0/SlimefunLegacyRP.zip",
   "sha1": "ccb872b7a24984d3e3d0472d963ae0ae1b3fc1e5",
   "sha256": "1ad615e5a9bd6117e5010255601ddb44451c1ce124fa17c39d376617f775cdb8",
-  "notes": "User-tested working baseline for Minecraft Java 1.21.11 through 26.3. Hashes are pinned. The GitHub v4.0.0 asset is intentionally not assumed to exist; automation must not fall back to an older release.",
-  "source_available": false
+  "notes": "User-tested working baseline for Minecraft Java 1.21.11 through 26.3. Automation may use the pinned release URL or releases/latest only when the downloaded ZIP matches both pinned hashes exactly. Never fall back to a different pack."
 }
