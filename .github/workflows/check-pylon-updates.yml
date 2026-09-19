@@ -9,6 +9,14 @@ on:
         type: string
   schedule:
     - cron: '17 */6 * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - 'PYLON_UPSTREAM.json'
+      - 'tools/import_pylon.py'
+      - 'tools/validate_pack.py'
+      - '.github/workflows/check-pylon-updates.yml'
 
 permissions:
   contents: read
@@ -71,14 +79,14 @@ jobs:
           fi
 
       - name: No new Pylon commit
-        if: steps.refs.outputs.upstream_changed == 'false' && github.event_name != 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'false' && github.event_name == 'schedule'
         shell: bash
         run: |
           echo "Pylon has not changed since accepted ref ${{ steps.refs.outputs.accepted_sha }}."
           echo "No candidate was produced."
 
       - name: Build accepted and target Pylon packs
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         shell: bash
         env:
           ACCEPTED_SHA: ${{ steps.refs.outputs.accepted_sha }}
@@ -114,7 +122,7 @@ jobs:
           PY
 
       - name: Read SFL baseline
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         id: baseline
         shell: bash
         run: |
@@ -129,7 +137,7 @@ jobs:
           PY
 
       - name: Download and verify confirmed SFL baseline
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         shell: bash
         run: |
           set -euo pipefail
@@ -139,7 +147,7 @@ jobs:
           python tools/validate_pack.py             baseline.zip             --sha256 "${{ steps.baseline.outputs.sha256 }}"
 
       - name: Import only upstream Pylon changes
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         shell: bash
         run: |
           set -euo pipefail
@@ -147,7 +155,7 @@ jobs:
           python tools/import_pylon.py             baseline.zip             pylon-accepted.zip             pylon-target.zip             SlimefunLegacyRP.zip             --report pylon-update-report.md             --metadata pylon-update.json             --old-ref "${{ steps.refs.outputs.accepted_sha }}"             --new-ref "${{ steps.refs.outputs.target_sha }}"
 
       - name: Validate candidate
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         shell: bash
         run: |
           set -euo pipefail
@@ -157,7 +165,7 @@ jobs:
           sha256sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha256
 
       - name: Read Pylon import result
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         id: result
         shell: bash
         run: |
@@ -176,7 +184,7 @@ jobs:
           PY
 
       - name: Write Actions summary
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         shell: bash
         run: |
           set -euo pipefail
@@ -202,7 +210,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Pylon candidate for in-game testing
-        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule'
         uses: actions/upload-artifact@v4
         with:
           name: SlimefunLegacyRP-PylonCandidate
@@ -218,7 +226,7 @@ jobs:
 
       - name: Require manual review for conflicts or upstream deletions
         if: >
-          (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') &&
+          (steps.refs.outputs.upstream_changed == 'true' || github.event_name != 'schedule') &&
           (steps.result.outputs.conflicts != '0' || steps.result.outputs.deletions != '0')
         shell: bash
         run: |
