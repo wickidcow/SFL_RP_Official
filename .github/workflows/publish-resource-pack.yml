@@ -1,0 +1,96 @@
+name: Publish Resource Pack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (for example 1.0.1). Leave blank to use VERSION."
+        required: false
+        type: string
+      source_url:
+        description: "ZIP source URL"
+        required: false
+        default: "http://overlord.kicks-ass.org:8163/SlimefunLegacyRP.zip"
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Publish SlimefunLegacyRP.zip
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Resolve release settings
+        id: release
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_SOURCE_URL: ${{ inputs.source_url }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${INPUT_VERSION:-}"
+          if [ -z "$VERSION" ]; then
+            VERSION="$(tr -d '[:space:]' < VERSION)"
+          fi
+
+          if [ -z "$VERSION" ]; then
+            echo "VERSION is empty" >&2
+            exit 1
+          fi
+
+          SOURCE_URL="${INPUT_SOURCE_URL:-}"
+          if [ -z "$SOURCE_URL" ]; then
+            SOURCE_URL="http://overlord.kicks-ass.org:8163/SlimefunLegacyRP.zip"
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "source_url=$SOURCE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Download resource pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "${{ steps.release.outputs.source_url }}" \
+            --output SlimefunLegacyRP.zip
+
+      - name: Validate resource pack ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -t SlimefunLegacyRP.zip
+          unzip -l SlimefunLegacyRP.zip | grep -q "pack.mcmeta"
+
+      - name: Publish GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" SlimefunLegacyRP.zip --clobber
+          else
+            gh release create "$TAG" SlimefunLegacyRP.zip \
+              --title "Slimefun Legacy Resource Pack $TAG" \
+              --notes "Unofficial Slimefun Legacy resource pack release $VERSION. Player download asset: SlimefunLegacyRP.zip" \
+              --latest
+          fi
+
+      - name: Show stable player URL
+        shell: bash
+        run: |
+          echo "https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip"
