@@ -11,6 +11,7 @@ on:
       - 'BASELINE.json'
       - 'tools/update_pack.py'
       - 'tools/validate_pack.py'
+      - '.github/workflows/build-resource-pack.yml'
 
 permissions:
   contents: read
@@ -33,6 +34,7 @@ jobs:
           import json
           data = json.load(open("BASELINE.json", encoding="utf-8"))
           print(f"url={data['url']}")
+          print(f"sha1={data['sha1']}")
           print(f"sha256={data['sha256']}")
           print(f"version={data['version']}")
           PY
@@ -53,6 +55,8 @@ jobs:
             baseline.zip \
             --sha256 "${{ steps.baseline.outputs.sha256 }}"
 
+          echo "${{ steps.baseline.outputs.sha1 }}  baseline.zip" | sha1sum --check -
+
       - name: Apply reviewed updates
         shell: bash
         run: |
@@ -62,6 +66,47 @@ jobs:
             SlimefunLegacyRP.zip \
             --overrides overrides \
             --delete-list deletions.txt
+
+      - name: Detect reviewed changes
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          from pathlib import Path
+
+          override_files = []
+          overrides = Path("overrides")
+          if overrides.exists():
+              override_files = [p for p in overrides.rglob("*") if p.is_file()]
+
+          deletions = []
+          delete_list = Path("deletions.txt")
+          if delete_list.exists():
+              for raw in delete_list.read_text(encoding="utf-8").splitlines():
+                  line = raw.strip()
+                  if line and not line.startswith("#"):
+                      deletions.append(line)
+
+          changed = bool(override_files or deletions)
+          print(f"changed={'true' if changed else 'false'}")
+          print(f"override_count={len(override_files)}")
+          print(f"deletion_count={len(deletions)}")
+          PY
+
+      - name: Verify exact no-op reproduction
+        if: steps.changes.outputs.changed == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "${{ steps.baseline.outputs.sha1 }}  SlimefunLegacyRP.zip" | sha1sum --check -
+          echo "${{ steps.baseline.outputs.sha256 }}  SlimefunLegacyRP.zip" | sha256sum --check -
+
+          cmp --silent baseline.zip SlimefunLegacyRP.zip
+
+          echo "No reviewed changes were present."
+          echo "SlimefunLegacyRP.zip is byte-for-byte identical to the confirmed working baseline."
 
       - name: Validate candidate
         shell: bash
@@ -74,10 +119,19 @@ jobs:
           {
             echo "## Resource-pack candidate"
             echo
-            echo '\`\`\`text'
+            echo "- Baseline: v${{ steps.baseline.outputs.version }}"
+            echo "- Reviewed overrides: ${{ steps.changes.outputs.override_count }}"
+            echo "- Reviewed deletions: ${{ steps.changes.outputs.deletion_count }}"
+            if [[ "${{ steps.changes.outputs.changed }}" == "false" ]]; then
+              echo "- Exact baseline reproduction: yes"
+            else
+              echo "- Exact baseline reproduction: no (reviewed candidate)"
+            fi
+            echo
+            echo '```text'
             cat SlimefunLegacyRP.sha1
             cat SlimefunLegacyRP.sha256
-            echo '\`\`\`'
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload exact candidate for in-game testing
