@@ -1,0 +1,228 @@
+name: Check Pylon Resource Pack Updates
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: "Optional Pylon branch/tag/commit to test (blank = upstream main)"
+        required: false
+        type: string
+  schedule:
+    - cron: '17 */6 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  pylon-update:
+    name: Build safe Pylon update candidate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out SFL resource-pack repository
+        uses: actions/checkout@v4
+
+      - name: Read accepted Pylon upstream
+        id: accepted
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open("PYLON_UPSTREAM.json", encoding="utf-8"))
+          print(f"repository={data['repository']}")
+          print(f"branch={data['branch']}")
+          print(f"accepted_ref={data['accepted_ref']}")
+          print(f"accepted_version={data.get('accepted_version', '')}")
+          PY
+
+      - name: Clone upstream Pylon resource pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --quiet "https://github.com/${{ steps.accepted.outputs.repository }}.git" upstream-pylon
+          git -C upstream-pylon fetch --quiet --tags --force
+
+      - name: Resolve target Pylon ref
+        id: refs
+        shell: bash
+        env:
+          INPUT_TARGET_REF: ${{ inputs.target_ref }}
+          ACCEPTED_REF: ${{ steps.accepted.outputs.accepted_ref }}
+          UPSTREAM_BRANCH: ${{ steps.accepted.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          TARGET="${INPUT_TARGET_REF:-}"
+          if [[ -z "$TARGET" ]]; then
+            TARGET="origin/$UPSTREAM_BRANCH"
+          fi
+
+          TARGET_SHA="$(git -C upstream-pylon rev-parse "$TARGET^{commit}")"
+          ACCEPTED_SHA="$(git -C upstream-pylon rev-parse "$ACCEPTED_REF^{commit}")"
+
+          echo "target_sha=$TARGET_SHA" >> "$GITHUB_OUTPUT"
+          echo "accepted_sha=$ACCEPTED_SHA" >> "$GITHUB_OUTPUT"
+
+          if [[ "$TARGET_SHA" == "$ACCEPTED_SHA" ]]; then
+            echo "upstream_changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "upstream_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: No new Pylon commit
+        if: steps.refs.outputs.upstream_changed == 'false' && github.event_name != 'workflow_dispatch'
+        shell: bash
+        run: |
+          echo "Pylon has not changed since accepted ref ${{ steps.refs.outputs.accepted_sha }}."
+          echo "No candidate was produced."
+
+      - name: Build accepted and target Pylon packs
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        env:
+          ACCEPTED_SHA: ${{ steps.refs.outputs.accepted_sha }}
+          TARGET_SHA: ${{ steps.refs.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+
+          build_pack() {
+            local ref="$1"
+            local destination="$2"
+
+            git -C upstream-pylon reset --hard --quiet
+            git -C upstream-pylon clean -fdx --quiet
+            git -C upstream-pylon checkout --force --quiet "$ref"
+
+            (
+              cd upstream-pylon
+              python resource_pack_generator.py
+            )
+
+            test -f upstream-pylon/output/PylonPack.zip
+            cp upstream-pylon/output/PylonPack.zip "$destination"
+          }
+
+          build_pack "$ACCEPTED_SHA" pylon-accepted.zip
+          build_pack "$TARGET_SHA" pylon-target.zip
+
+          git -C upstream-pylon checkout --force --quiet "$TARGET_SHA"
+          python - <<'PY' > pylon-target-version.txt
+          import json
+          data = json.load(open("upstream-pylon/input/settings.json", encoding="utf-8"))
+          print(data.get("version", "unknown"))
+          PY
+
+      - name: Read SFL baseline
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        id: baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open("BASELINE.json", encoding="utf-8"))
+          print(f"url={data['url']}")
+          print(f"sha1={data['sha1']}")
+          print(f"sha256={data['sha256']}")
+          print(f"version={data['version']}")
+          PY
+
+      - name: Download and verify confirmed SFL baseline
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2             "${{ steps.baseline.outputs.url }}"             --output baseline.zip
+
+          echo "${{ steps.baseline.outputs.sha1 }}  baseline.zip" | sha1sum --check -
+          python tools/validate_pack.py             baseline.zip             --sha256 "${{ steps.baseline.outputs.sha256 }}"
+
+      - name: Import only upstream Pylon changes
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python tools/import_pylon.py             baseline.zip             pylon-accepted.zip             pylon-target.zip             SlimefunLegacyRP.zip             --report pylon-update-report.md             --metadata pylon-update.json             --old-ref "${{ steps.refs.outputs.accepted_sha }}"             --new-ref "${{ steps.refs.outputs.target_sha }}"
+
+      - name: Validate candidate
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python tools/validate_pack.py SlimefunLegacyRP.zip
+          sha1sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha1
+          sha256sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha256
+
+      - name: Read Pylon import result
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        id: result
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open("pylon-update.json", encoding="utf-8"))
+          print(f"changed={'true' if data['changed'] else 'false'}")
+          print(f"conflicts={data['conflict_count']}")
+          print(f"deletions={data['deletion_review_count']}")
+          print(f"namespace_added={len(data['namespace_added'])}")
+          print(f"namespace_updated={len(data['namespace_updated'])}")
+          print(f"carrier_added={len(data['carrier_added'])}")
+          print(f"carrier_updated={len(data['carrier_updated'])}")
+          print(f"atlas_added={len(data['atlas_added'])}")
+          PY
+
+      - name: Write Actions summary
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(cat pylon-target-version.txt)"
+          {
+            echo "## Pylon resource-pack candidate"
+            echo
+            echo "- SFL baseline: v${{ steps.baseline.outputs.version }}"
+            echo "- Accepted Pylon: ${{ steps.refs.outputs.accepted_sha }}"
+            echo "- Candidate Pylon: ${{ steps.refs.outputs.target_sha }}"
+            echo "- Candidate Pylon version: $VERSION"
+            echo "- Candidate differs from SFL baseline: ${{ steps.result.outputs.changed }}"
+            echo "- Namespace files added: ${{ steps.result.outputs.namespace_added }}"
+            echo "- Namespace files updated: ${{ steps.result.outputs.namespace_updated }}"
+            echo "- Carrier cases added: ${{ steps.result.outputs.carrier_added }}"
+            echo "- Carrier cases updated: ${{ steps.result.outputs.carrier_updated }}"
+            echo "- Atlas sources added: ${{ steps.result.outputs.atlas_added }}"
+            echo "- Conflicts requiring review: ${{ steps.result.outputs.conflicts }}"
+            echo "- Deletions requiring review: ${{ steps.result.outputs.deletions }}"
+            echo
+            cat pylon-update-report.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Pylon candidate for in-game testing
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimefunLegacyRP-PylonCandidate
+          path: |
+            SlimefunLegacyRP.zip
+            SlimefunLegacyRP.sha1
+            SlimefunLegacyRP.sha256
+            pylon-update-report.md
+            pylon-update.json
+            pylon-target-version.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Require manual review for conflicts or upstream deletions
+        if: >
+          (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') &&
+          (steps.result.outputs.conflicts != '0' || steps.result.outputs.deletions != '0')
+        shell: bash
+        run: |
+          echo "Pylon candidate was produced, but manual review is required."
+          echo "Conflicts: ${{ steps.result.outputs.conflicts }}"
+          echo "Upstream deletions: ${{ steps.result.outputs.deletions }}"
+          exit 1
