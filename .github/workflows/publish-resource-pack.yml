@@ -1,4 +1,4 @@
-name: Publish Slimefun + Pylon + IAWeapons Pack
+name: Publish Slimefun Legacy Resource Pack
 
 on:
   push:
@@ -6,21 +6,22 @@ on:
       - main
     paths:
       - VERSION
+      - '.github/workflows/publish-resource-pack.yml'
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (for example 3.0.1). Leave blank to use VERSION."
+        description: "Release version (for example 3.0.0). Leave blank to use VERSION."
         required: false
         type: string
-      slimefun_source_url:
-        description: "Source full Slimefun/IAWeapons pack"
+      source_url:
+        description: "Validated Slimefun Legacy RP ZIP to promote"
         required: false
         default: "https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip"
         type: string
-      pylon_source_url:
-        description: "Official Pylon resource-pack ZIP"
+      source_sha256:
+        description: "Expected SHA-256 of the source ZIP"
         required: false
-        default: "https://github.com/pylonmc/pylon-resource-pack/releases/download/v0.7.1/PylonPack.zip"
+        default: "c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd"
         type: string
 
 permissions:
@@ -28,77 +29,62 @@ permissions:
 
 jobs:
   publish:
-    name: Build and publish combined resource pack
+    name: Publish official resource pack
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Resolve release settings
         id: release
         shell: bash
         env:
           INPUT_VERSION: ${{ inputs.version }}
-          INPUT_SF_URL: ${{ inputs.slimefun_source_url }}
-          INPUT_PYLON_URL: ${{ inputs.pylon_source_url }}
+          INPUT_SOURCE_URL: ${{ inputs.source_url }}
+          INPUT_SOURCE_SHA256: ${{ inputs.source_sha256 }}
         run: |
           set -euo pipefail
 
           VERSION="${INPUT_VERSION:-}"
-          if [ -z "$VERSION" ]; then
+          if [[ -z "$VERSION" ]]; then
             VERSION="$(tr -d '[:space:]' < VERSION)"
           fi
 
-          SF_URL="${INPUT_SF_URL:-}"
-          if [ -z "$SF_URL" ]; then
-            SF_URL="https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip"
+          SOURCE_URL="${INPUT_SOURCE_URL:-}"
+          if [[ -z "$SOURCE_URL" ]]; then
+            SOURCE_URL="https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip"
           fi
 
-          PYLON_URL="${INPUT_PYLON_URL:-}"
-          if [ -z "$PYLON_URL" ]; then
-            PYLON_URL="https://github.com/pylonmc/pylon-resource-pack/releases/download/v0.7.1/PylonPack.zip"
+          SOURCE_SHA256="${INPUT_SOURCE_SHA256:-}"
+          if [[ -z "$SOURCE_SHA256" ]]; then
+            SOURCE_SHA256="c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd"
           fi
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "sf_url=$SF_URL" >> "$GITHUB_OUTPUT"
-          echo "pylon_url=$PYLON_URL" >> "$GITHUB_OUTPUT"
+          echo "source_url=$SOURCE_URL" >> "$GITHUB_OUTPUT"
+          echo "source_sha256=$SOURCE_SHA256" >> "$GITHUB_OUTPUT"
 
-      - name: Download Slimefun/IAWeapons source
+      - name: Download validated Slimefun Legacy RP
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 3 --retry-delay 2             "${{ steps.release.outputs.sf_url }}"             --output slimefun-source.zip
+          curl --fail --location --retry 3 --retry-delay 2             "${{ steps.release.outputs.source_url }}"             --output SlimefunLegacyRP.zip
 
-      - name: Download official Pylon pack
+      - name: Verify exact source and ZIP structure
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 3 --retry-delay 2             "${{ steps.release.outputs.pylon_url }}"             --output pylon-source.zip
 
-      - name: Build combined pack
-        shell: bash
-        run: |
-          set -euo pipefail
-          python tools/build_combined_pack.py             slimefun-source.zip             pylon-source.zip             SlimefunLegacyRP.zip
-
-      - name: Validate release ZIP
-        shell: bash
-        run: |
-          set -euo pipefail
+          echo "${{ steps.release.outputs.source_sha256 }}  SlimefunLegacyRP.zip" | sha256sum --check -
           unzip -t SlimefunLegacyRP.zip
-          unzip -l SlimefunLegacyRP.zip | grep -q "assets/slimefun/"
-          unzip -l SlimefunLegacyRP.zip | grep -q "assets/pylon/"
-          unzip -l SlimefunLegacyRP.zip | grep -q "assets/iaweapons/"
-          unzip -l SlimefunLegacyRP.zip | grep -q "assets/minecraft/items/player_head.json"
+          unzip -l SlimefunLegacyRP.zip | grep -q 'pack.mcmeta'
+          unzip -l SlimefunLegacyRP.zip | grep -q 'assets/slimefun/'
 
-          if unzip -l SlimefunLegacyRP.zip | grep -Eq "assets/(rebar|rebarmobs|supreme|infinityexpansion|fluffymachines|cultivation|exotic_garden|gastronomicon)/"; then
-            echo "Unexpected removed addon namespace found" >&2
-            exit 1
-          fi
-
+          echo "SHA-1:"
           sha1sum SlimefunLegacyRP.zip
+          echo "SHA-256:"
           sha256sum SlimefunLegacyRP.zip
 
       - name: Publish GitHub release
@@ -110,29 +96,31 @@ jobs:
         run: |
           set -euo pipefail
 
-          NOTES="Slimefun Legacy Resource Pack $VERSION
+          NOTES="Slimefun Legacy Official Resource Pack $VERSION
 
-          Combined clean pack for Minecraft Java 1.21.11+ containing:
-          - Slimefun Legacy core models/textures
-          - Pylon models/textures
-          - IAWeapons models/textures/sounds
-          - required modern item definitions and atlases
-          - preserved player-head/skull special fallbacks
-          - purple Slimefun resource-pack icon
+          Official companion resource pack for Slimefun Legacy.
 
-          The build merges Slimefun/IAWeapons numeric CustomModelData with Pylon string CustomModelData so the three systems can share vanilla carrier items safely.
+          Compatibility:
+          - Minecraft Java 1.21.11 through 26.3
+          - Slimefun Legacy 4.1.51+
 
-          Removed unrelated addon/resource-pack namespaces.
+          This release promotes the validated full Slimefun Legacy resource pack unchanged.
+          The player-facing asset name is permanently kept as SlimefunLegacyRP.zip.
 
-          Player download asset: SlimefunLegacyRP.zip"
+          Stable player download:
+          https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" SlimefunLegacyRP.zip --clobber
+            gh release edit "$TAG"               --title "Slimefun Legacy Resource Pack $TAG"               --notes "$NOTES"               --latest
           else
             gh release create "$TAG" SlimefunLegacyRP.zip               --title "Slimefun Legacy Resource Pack $TAG"               --notes "$NOTES"               --latest
           fi
 
-      - name: Show stable player URL
+      - name: Verify permanent latest download
         shell: bash
         run: |
-          echo "https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip"
+          set -euo pipefail
+          URL="https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip"
+          curl --fail --location --head "$URL"
+          echo "$URL"
