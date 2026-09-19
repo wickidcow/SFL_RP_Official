@@ -43,7 +43,6 @@ jobs:
         shell: bash
         env:
           BUILD_RUN_ID: ${{ inputs.build_run_id }}
-          ARTIFACT_NAME: ${{ inputs.artifact_name }}
           SOURCE_URL: ${{ inputs.source_url }}
           SOURCE_SHA256: ${{ inputs.source_sha256 }}
           VERSION: ${{ inputs.version }}
@@ -80,7 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p candidate
-          gh run download "${{ inputs.build_run_id }}"             --repo "$GITHUB_REPOSITORY"             --name "${{ inputs.artifact_name }}"             --dir candidate
+          gh run download "${{ inputs.build_run_id }}" --repo "$GITHUB_REPOSITORY" --name "${{ inputs.artifact_name }}" --dir candidate
           test -f candidate/SlimefunLegacyRP.zip
           cp candidate/SlimefunLegacyRP.zip SlimefunLegacyRP.zip
 
@@ -89,14 +88,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 3 --retry-delay 2             "${{ inputs.source_url }}"             --output SlimefunLegacyRP.zip
+          curl --fail --location --retry 3 --retry-delay 2 "${{ inputs.source_url }}" --output SlimefunLegacyRP.zip
 
       - name: Verify exact tested candidate
         shell: bash
         run: |
           set -euo pipefail
           echo "${{ inputs.source_sha256 }}  SlimefunLegacyRP.zip" | sha256sum --check -
-          python tools/validate_pack.py             SlimefunLegacyRP.zip             --sha256 "${{ inputs.source_sha256 }}"
+          python tools/validate_pack.py SlimefunLegacyRP.zip --sha256 "${{ inputs.source_sha256 }}"
 
       - name: Publish release unchanged
         shell: bash
@@ -108,27 +107,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          NOTES="$(cat <<EOF
-Slimefun Legacy Resource Pack $VERSION
-
-Tested combined resource pack for Minecraft Java 1.21.11 through 26.3.
-
-This release publishes the exact in-game-tested candidate unchanged as
-SlimefunLegacyRP.zip.
-
-SHA-256:
-$SHA256
-
-Permanent player URL:
-https://github.com/$GITHUB_REPOSITORY/releases/latest/download/SlimefunLegacyRP.zip
-EOF
-)"
+          {
+            echo "Slimefun Legacy Resource Pack $VERSION"
+            echo
+            echo "Tested combined resource pack for Minecraft Java 1.21.11 through 26.3."
+            echo
+            echo "This release publishes the exact in-game-tested candidate unchanged as SlimefunLegacyRP.zip."
+            echo
+            echo "SHA-256:"
+            echo "$SHA256"
+            echo
+            echo "Permanent player URL:"
+            echo "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/SlimefunLegacyRP.zip"
+          } > release-notes.md
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" SlimefunLegacyRP.zip --clobber
-            gh release edit "$TAG"               --title "Slimefun Legacy Resource Pack $TAG"               --notes "$NOTES"               --latest
+            gh release edit "$TAG" --title "Slimefun Legacy Resource Pack $TAG" --notes-file release-notes.md --latest
           else
-            gh release create "$TAG" SlimefunLegacyRP.zip               --title "Slimefun Legacy Resource Pack $TAG"               --notes "$NOTES"               --latest
+            gh release create "$TAG" SlimefunLegacyRP.zip --title "Slimefun Legacy Resource Pack $TAG" --notes-file release-notes.md --latest
           fi
 
       - name: Verify published asset checksum
