@@ -24,6 +24,32 @@ def copy_tree(src: Path, dst: Path):
         raise FileNotFoundError(src)
     shutil.copytree(src, dst)
 
+def normalize_resource_aliases(root: Path):
+    """Repair ItemsAdder alias namespaces only inside the retained IAWeapons graph."""
+    replacements = {
+        "_minecraft:": "minecraft:",
+        "_b_minecraft:": "minecraft:",
+        "_iaweapons:": "iaweapons:",
+        "_b_iaweapons:": "iaweapons:",
+    }
+
+    def rewrite(obj):
+        if isinstance(obj, dict):
+            return {key: rewrite(value) for key, value in obj.items()}
+        if isinstance(obj, list):
+            return [rewrite(value) for value in obj]
+        if isinstance(obj, str):
+            for prefix, replacement in replacements.items():
+                if obj.startswith(prefix):
+                    return replacement + obj[len(prefix):]
+        return obj
+
+    for path in root.rglob("*.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        fixed = rewrite(data)
+        if fixed != data:
+            path.write_text(json.dumps(fixed, separators=(",", ":")) + "\n", encoding="utf-8")
+
 def build(source_zip: Path, output_zip: Path):
     with tempfile.TemporaryDirectory(prefix="sfl-iaweapons-") as temp:
         temp = Path(temp)
@@ -117,6 +143,10 @@ def build(source_zip: Path, output_zip: Path):
         atlas = out / OVERLAY / "assets" / "minecraft" / "atlases" / "items.json"
         atlas.parent.mkdir(parents=True, exist_ok=True)
         atlas.write_text(json.dumps({"sources": sources}, separators=(",", ":")) + "\n", encoding="utf-8")
+
+        # Older generated packs can retain private ItemsAdder aliases. Normalize only
+        # the two namespaces kept by this trimmed pack before validating the graph.
+        normalize_resource_aliases(out)
 
         (out / "README.txt").write_text(
             "SFL IAWeapons Resource Pack\n"
