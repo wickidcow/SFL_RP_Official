@@ -15,6 +15,7 @@ on:
     paths:
       - 'PYLON_UPSTREAM.json'
       - 'tools/import_pylon.py'
+      - 'tools/test_import_pylon.py'
       - 'tools/validate_pack.py'
       - '.github/workflows/check-pylon-updates.yml'
 
@@ -29,6 +30,12 @@ jobs:
     steps:
       - name: Check out SFL resource-pack repository
         uses: actions/checkout@v4
+
+      - name: Test Pylon importer
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/test_import_pylon.py
 
       - name: Read accepted Pylon upstream
         id: accepted
