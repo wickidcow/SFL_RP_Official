@@ -1,27 +1,19 @@
 name: Publish Slimefun Legacy Resource Pack
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - VERSION
-      - '.github/workflows/publish-resource-pack.yml'
   workflow_dispatch:
     inputs:
-      version:
-        description: "Release version (for example 3.0.0). Leave blank to use VERSION."
-        required: false
-        type: string
       source_url:
-        description: "Validated Slimefun Legacy RP ZIP to promote"
-        required: false
-        default: "https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip"
+        description: "URL of the tested SlimefunLegacyRP.zip candidate"
+        required: true
         type: string
       source_sha256:
-        description: "Expected SHA-256 of the source ZIP"
+        description: "Exact SHA-256 of the tested candidate"
+        required: true
+        type: string
+      version:
+        description: "Release version without v (blank = VERSION)"
         required: false
-        default: "c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd"
         type: string
 
 permissions:
@@ -29,65 +21,48 @@ permissions:
 
 jobs:
   publish:
-    name: Publish official resource pack
+    name: Validate and publish exact tested ZIP
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
-      - name: Resolve release settings
+      - name: Resolve release version
         id: release
         shell: bash
         env:
           INPUT_VERSION: ${{ inputs.version }}
-          INPUT_SOURCE_URL: ${{ inputs.source_url }}
-          INPUT_SOURCE_SHA256: ${{ inputs.source_sha256 }}
         run: |
           set -euo pipefail
-
           VERSION="${INPUT_VERSION:-}"
           if [[ -z "$VERSION" ]]; then
             VERSION="$(tr -d '[:space:]' < VERSION)"
           fi
-
-          SOURCE_URL="${INPUT_SOURCE_URL:-}"
-          if [[ -z "$SOURCE_URL" ]]; then
-            SOURCE_URL="https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip"
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $VERSION" >&2
+            exit 1
           fi
-
-          SOURCE_SHA256="${INPUT_SOURCE_SHA256:-}"
-          if [[ -z "$SOURCE_SHA256" ]]; then
-            SOURCE_SHA256="c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd"
-          fi
-
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "source_url=$SOURCE_URL" >> "$GITHUB_OUTPUT"
-          echo "source_sha256=$SOURCE_SHA256" >> "$GITHUB_OUTPUT"
 
-      - name: Download validated Slimefun Legacy RP
+      - name: Download exact tested candidate
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 3 --retry-delay 2             "${{ steps.release.outputs.source_url }}"             --output SlimefunLegacyRP.zip
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "${{ inputs.source_url }}" \
+            --output SlimefunLegacyRP.zip
 
-      - name: Verify exact source and ZIP structure
+      - name: Verify checksum and resource-pack invariants
         shell: bash
         run: |
           set -euo pipefail
+          python tools/validate_pack.py \
+            SlimefunLegacyRP.zip \
+            --sha256 "${{ inputs.source_sha256 }}"
 
-          echo "${{ steps.release.outputs.source_sha256 }}  SlimefunLegacyRP.zip" | sha256sum --check -
-          unzip -t SlimefunLegacyRP.zip
-          unzip -l SlimefunLegacyRP.zip | grep -q 'pack.mcmeta'
-          unzip -l SlimefunLegacyRP.zip | grep -q 'assets/slimefun/'
-
-          echo "SHA-1:"
-          sha1sum SlimefunLegacyRP.zip
-          echo "SHA-256:"
-          sha256sum SlimefunLegacyRP.zip
-
-      - name: Publish GitHub release
+      - name: Publish release
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -96,31 +71,41 @@ jobs:
         run: |
           set -euo pipefail
 
-          NOTES="Slimefun Legacy Official Resource Pack $VERSION
+          NOTES="$(cat <<EOF
+Slimefun Legacy Resource Pack $VERSION
 
-          Official companion resource pack for Slimefun Legacy.
+Tested combined resource pack for Minecraft Java 1.21.11 through 26.3.
 
-          Compatibility:
-          - Minecraft Java 1.21.11 through 26.3
-          - Slimefun Legacy 4.1.51+
+Includes Slimefun Legacy/addon assets, Pylon/Rebar/RebarMobs, Magic, MMOItems, IAWeapons/Slimefun Warfare support, MC Icons, and ore overrides.
 
-          This release promotes the validated full Slimefun Legacy resource pack unchanged.
-          The player-facing asset name is permanently kept as SlimefunLegacyRP.zip.
+This workflow publishes the validated candidate unchanged as:
+SlimefunLegacyRP.zip
 
-          Stable player download:
-          https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip"
+Permanent player URL:
+https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip
+EOF
+)"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" SlimefunLegacyRP.zip --clobber
-            gh release edit "$TAG"               --title "Slimefun Legacy Resource Pack $TAG"               --notes "$NOTES"               --latest
+            gh release edit "$TAG" \
+              --title "Slimefun Legacy Resource Pack $TAG" \
+              --notes "$NOTES" \
+              --latest
           else
-            gh release create "$TAG" SlimefunLegacyRP.zip               --title "Slimefun Legacy Resource Pack $TAG"               --notes "$NOTES"               --latest
+            gh release create "$TAG" SlimefunLegacyRP.zip \
+              --title "Slimefun Legacy Resource Pack $TAG" \
+              --notes "$NOTES" \
+              --latest
           fi
 
-      - name: Verify permanent latest download
+      - name: Verify permanent latest asset
         shell: bash
+        env:
+          EXPECTED_SHA256: ${{ inputs.source_sha256 }}
         run: |
           set -euo pipefail
           URL="https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip"
-          curl --fail --location --head "$URL"
+          curl --fail --location --retry 3 "$URL" --output published.zip
+          echo "$EXPECTED_SHA256  published.zip" | sha256sum --check -
           echo "$URL"
