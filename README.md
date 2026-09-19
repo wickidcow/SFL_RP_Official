@@ -112,6 +112,41 @@ python tools/update_pack.py base.zip SlimefunLegacyRP.zip \
 python tools/validate_pack.py SlimefunLegacyRP.zip
 ```
 
+## Automatic Pylon update candidates
+
+The repository tracks the last accepted upstream Pylon resource-pack revision in
+`PYLON_UPSTREAM.json`.
+
+`.github/workflows/check-pylon-updates.yml` checks
+`pylonmc/pylon-resource-pack` every six hours. When the upstream commit changes
+it rebuilds both the accepted and new Pylon packs, diffs them, and uses
+`tools/import_pylon.py` to merge only the upstream changes into the confirmed
+Slimefun Legacy baseline.
+
+The Pylon importer:
+
+- copies new/changed `pylon`, `rebar`, and `rebarmobs` assets only when the
+  local file still matches the previously accepted upstream version;
+- merges upstream string CustomModelData cases into existing shared vanilla
+  carrier definitions instead of replacing those files;
+- includes Pylon, Rebar, RebarMobs, and generated helper selector namespaces;
+- adds new upstream item/block atlas registrations without rebuilding either
+  atlas;
+- never applies upstream deletions automatically;
+- reports local conflicts instead of overwriting local fixes;
+- validates the combined candidate and uploads
+  `SlimefunLegacyRP-PylonCandidate` for in-game testing;
+- never publishes that candidate automatically.
+
+The accepted Pylon baseline is currently **0.7.1** at commit
+`a7b49d81cd2c640395df376be3af8490958bd54c`.
+
+The confirmed SFL ZIP hashes remain pinned even when its source asset is not
+available from GitHub. Automation will not silently fall back to an older
+release; in that state it can still detect an upstream Pylon change and emit an
+upstream diff, but it will not create a combined candidate until the exact
+tested baseline ZIP is available.
+
 ## Regression checks
 
 `tools/validate_pack.py` currently guards the working behavior that was
