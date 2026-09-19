@@ -1,0 +1,92 @@
+name: Build Slimefun Legacy Resource Pack
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'overrides/**'
+      - 'deletions.txt'
+      - 'BASELINE.json'
+      - 'tools/update_pack.py'
+      - 'tools/validate_pack.py'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and validate candidate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Read pinned baseline
+        id: baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          data = json.load(open("BASELINE.json", encoding="utf-8"))
+          print(f"url={data['url']}")
+          print(f"sha256={data['sha256']}")
+          print(f"version={data['version']}")
+          PY
+
+      - name: Download known-good baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "${{ steps.baseline.outputs.url }}" \
+            --output baseline.zip
+
+      - name: Verify known-good baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/validate_pack.py \
+            baseline.zip \
+            --sha256 "${{ steps.baseline.outputs.sha256 }}"
+
+      - name: Apply reviewed updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/update_pack.py \
+            baseline.zip \
+            SlimefunLegacyRP.zip \
+            --overrides overrides \
+            --delete-list deletions.txt
+
+      - name: Validate candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/validate_pack.py SlimefunLegacyRP.zip
+          sha256sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha256
+          sha1sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha1
+
+          {
+            echo "## Resource-pack candidate"
+            echo
+            echo '\`\`\`text'
+            cat SlimefunLegacyRP.sha1
+            cat SlimefunLegacyRP.sha256
+            echo '\`\`\`'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload exact candidate for in-game testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimefunLegacyRP
+          path: |
+            SlimefunLegacyRP.zip
+            SlimefunLegacyRP.sha1
+            SlimefunLegacyRP.sha256
+          if-no-files-found: error
+          retention-days: 30
