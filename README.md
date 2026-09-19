@@ -20,6 +20,8 @@ plugins/Slimefun/item-models.yml
 
 The YAML mapping is server-side configuration and is not part of the resource-pack download sent to players.
 
+A reference copy is kept in this repository at [`server/item-models.yml`](server/item-models.yml). Slimefun Legacy bundles the matching mapping so the live server file is created/updated under `plugins/Slimefun/item-models.yml`.
+
 ## Releasing an update
 
 1. Replace/update the source resource pack.
