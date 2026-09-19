@@ -1,0 +1,9 @@
+{
+  "pylon": {
+    "repository": "pylonmc/pylon-resource-pack",
+    "tracked_branch": "main",
+    "last_approved_commit": "a7b49d81cd2c640395df376be3af8490958bd54c",
+    "last_approved_version": "0.7.1",
+    "policy": "Detect newer upstream commits automatically. Build and validate a candidate only. Never publish automatically."
+  }
+}
