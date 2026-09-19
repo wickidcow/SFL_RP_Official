@@ -1,0 +1,4 @@
+# Pack-relative paths to remove from the known-good baseline in the next build.
+# One path per line. Directories are allowed.
+#
+# Keep empty unless a future update intentionally removes a resource.
