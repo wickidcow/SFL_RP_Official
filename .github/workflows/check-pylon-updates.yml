@@ -129,54 +129,66 @@ jobs:
           print(f"sha1={data['sha1']}")
           print(f"sha256={data['sha256']}")
           print(f"version={data['version']}")
-          print(f"available={'true' if data.get('source_available', True) else 'false'}")
           PY
 
-      - name: Tested SFL baseline is not published
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available != 'true'
+      - name: Download and verify exact confirmed SFL baseline
+        if: steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch'
         shell: bash
-        run: |
-          echo "A Pylon update can be detected, but the tested SFL baseline ZIP is intentionally not available from GitHub yet."
-          echo "The workflow will not fall back to v3.0.0 or any older pack."
-          {
-            echo "## Pylon update detected"
-            echo
-            echo "- Accepted Pylon: ${{ steps.refs.outputs.accepted_sha }}"
-            echo "- Candidate Pylon: ${{ steps.refs.outputs.target_sha }}"
-            echo "- SFL baseline ZIP: not published"
-            echo
-            echo "No combined candidate was produced because using an older resource pack would risk regressions."
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload upstream Pylon diff when baseline is unavailable
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Pylon-Upstream-Diff
-          path: |
-            pylon-source-diff.txt
-            pylon-target-version.txt
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Download and verify confirmed SFL baseline
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available == 'true'
-        shell: bash
+        env:
+          PINNED_URL: ${{ steps.baseline.outputs.url }}
+          EXPECTED_SHA1: ${{ steps.baseline.outputs.sha1 }}
+          EXPECTED_SHA256: ${{ steps.baseline.outputs.sha256 }}
         run: |
           set -euo pipefail
-          curl --fail --location --retry 3 --retry-delay 2 "${{ steps.baseline.outputs.url }}" --output baseline.zip
-          echo "${{ steps.baseline.outputs.sha1 }}  baseline.zip" | sha1sum --check -
-          python tools/validate_pack.py baseline.zip --sha256 "${{ steps.baseline.outputs.sha256 }}"
+
+          LATEST_URL="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/SlimefunLegacyRP.zip"
+
+          try_exact_baseline() {
+            local url="$1"
+            local label="$2"
+            rm -f baseline.zip
+            if ! curl --fail --location --retry 3 --retry-delay 2 "$url" --output baseline.zip; then
+              echo "$label URL was unavailable: $url"
+              return 1
+            fi
+
+            if ! echo "$EXPECTED_SHA1  baseline.zip" | sha1sum --check -; then
+              echo "$label did not match the pinned SHA-1."
+              rm -f baseline.zip
+              return 1
+            fi
+
+            if ! echo "$EXPECTED_SHA256  baseline.zip" | sha256sum --check -; then
+              echo "$label did not match the pinned SHA-256."
+              rm -f baseline.zip
+              return 1
+            fi
+
+            echo "Using exact tested baseline from $label: $url"
+            return 0
+          }
+
+          if try_exact_baseline "$PINNED_URL" "pinned release"; then
+            :
+          elif try_exact_baseline "$LATEST_URL" "latest release"; then
+            :
+          else
+            echo "The exact tested SlimefunLegacyRP.zip is not available from either approved GitHub URL." >&2
+            echo "Refusing to use any older or different resource pack." >&2
+            exit 1
+          fi
+
+          python tools/validate_pack.py baseline.zip --sha256 "$EXPECTED_SHA256"
 
       - name: Import only upstream Pylon changes
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available == 'true'
+        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') 
         shell: bash
         run: |
           set -euo pipefail
           python tools/import_pylon.py baseline.zip pylon-accepted.zip pylon-target.zip SlimefunLegacyRP.zip --report pylon-update-report.md --metadata pylon-update.json --old-ref "${{ steps.refs.outputs.accepted_sha }}" --new-ref "${{ steps.refs.outputs.target_sha }}"
 
       - name: Validate candidate
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available == 'true'
+        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') 
         shell: bash
         run: |
           set -euo pipefail
@@ -185,7 +197,7 @@ jobs:
           sha256sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha256
 
       - name: Read Pylon import result
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available == 'true'
+        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') 
         id: result
         shell: bash
         run: |
@@ -204,7 +216,7 @@ jobs:
           PY
 
       - name: Write Actions summary
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available == 'true'
+        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') 
         shell: bash
         run: |
           set -euo pipefail
@@ -229,7 +241,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Pylon candidate for in-game testing
-        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') && steps.baseline.outputs.available == 'true'
+        if: (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') 
         uses: actions/upload-artifact@v4
         with:
           name: SlimefunLegacyRP-PylonCandidate
@@ -246,7 +258,6 @@ jobs:
 
       - name: Require manual review for conflicts or upstream deletions
         if: >
-          steps.baseline.outputs.available == 'true' &&
           (steps.refs.outputs.upstream_changed == 'true' || github.event_name == 'workflow_dispatch') &&
           (steps.result.outputs.conflicts != '0' || steps.result.outputs.deletions != '0')
         shell: bash
