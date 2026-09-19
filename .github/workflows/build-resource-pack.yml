@@ -37,9 +37,18 @@ jobs:
           print(f"sha1={data['sha1']}")
           print(f"sha256={data['sha256']}")
           print(f"version={data['version']}")
+          print(f"available={'true' if data.get('source_available', True) else 'false'}")
           PY
 
+      - name: Baseline source is intentionally unavailable
+        if: steps.baseline.outputs.available != 'true'
+        shell: bash
+        run: |
+          echo "The tested resource-pack hashes are pinned, but its GitHub source ZIP is not published."
+          echo "No candidate will be built from an older release."
+
       - name: Download known-good baseline
+        if: steps.baseline.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -48,6 +57,7 @@ jobs:
             --output baseline.zip
 
       - name: Verify known-good baseline
+        if: steps.baseline.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -58,6 +68,7 @@ jobs:
           echo "${{ steps.baseline.outputs.sha1 }}  baseline.zip" | sha1sum --check -
 
       - name: Apply reviewed updates
+        if: steps.baseline.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -68,6 +79,7 @@ jobs:
             --delete-list deletions.txt
 
       - name: Detect reviewed changes
+        if: steps.baseline.outputs.available == 'true'
         id: changes
         shell: bash
         run: |
@@ -109,6 +121,7 @@ jobs:
           echo "SlimefunLegacyRP.zip is byte-for-byte identical to the confirmed working baseline."
 
       - name: Validate candidate
+        if: steps.baseline.outputs.available == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -135,6 +148,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload exact candidate for in-game testing
+        if: steps.baseline.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: SlimefunLegacyRP
