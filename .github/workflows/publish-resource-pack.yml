@@ -1,4 +1,4 @@
-name: Publish Resource Pack
+name: Publish IAWeapons Resource Pack
 
 on:
   push:
@@ -9,13 +9,13 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version (for example 1.0.2). Leave blank to use VERSION."
+        description: "Release version (for example 2.0.1). Leave blank to use VERSION."
         required: false
         type: string
       source_url:
-        description: "Source ZIP URL before Legacy repair"
+        description: "Full source pack ZIP to trim down to IAWeapons"
         required: false
-        default: "http://overlord.kicks-ass.org:8163/SlimefunLegacyRP.zip"
+        default: "https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip"
         type: string
 
 permissions:
@@ -23,8 +23,9 @@ permissions:
 
 jobs:
   publish:
-    name: Repair and publish SlimefunLegacyRP.zip
+    name: Build and publish IAWeapons-only pack
     runs-on: ubuntu-latest
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -43,44 +44,41 @@ jobs:
             VERSION="$(tr -d '[:space:]' < VERSION)"
           fi
 
-          if [ -z "$VERSION" ]; then
-            echo "VERSION is empty" >&2
-            exit 1
-          fi
-
           SOURCE_URL="${INPUT_SOURCE_URL:-}"
           if [ -z "$SOURCE_URL" ]; then
-            SOURCE_URL="http://overlord.kicks-ass.org:8163/SlimefunLegacyRP.zip"
+            SOURCE_URL="https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip"
           fi
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
           echo "source_url=$SOURCE_URL" >> "$GITHUB_OUTPUT"
 
-      - name: Download source resource pack
+      - name: Download source pack
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 3 --retry-delay 2 \
-            "${{ steps.release.outputs.source_url }}" \
-            --output SlimefunLegacyRP.source.zip
+          curl --fail --location --retry 3 --retry-delay 2             "${{ steps.release.outputs.source_url }}"             --output source-pack.zip
 
-      - name: Repair modern model and texture references
+      - name: Build clean IAWeapons pack
         shell: bash
         run: |
           set -euo pipefail
-          python tools/repair_pack.py \
-            SlimefunLegacyRP.source.zip \
-            SlimefunLegacyRP.zip
+          python tools/build_iaweapons_pack.py source-pack.zip SFL_IAWeaponsRP.zip
 
-      - name: Validate final resource pack ZIP
+      - name: Validate release ZIP
         shell: bash
         run: |
           set -euo pipefail
-          unzip -t SlimefunLegacyRP.zip
-          unzip -l SlimefunLegacyRP.zip | grep -q "pack.mcmeta"
-          unzip -l SlimefunLegacyRP.zip | grep -q "pack.png"
-          sha256sum SlimefunLegacyRP.zip
+          unzip -t SFL_IAWeaponsRP.zip
+          unzip -l SFL_IAWeaponsRP.zip | grep -q "pack.mcmeta"
+          unzip -l SFL_IAWeaponsRP.zip | grep -q "pack.png"
+          unzip -l SFL_IAWeaponsRP.zip | grep -q "assets/iaweapons/"
+          if unzip -l SFL_IAWeaponsRP.zip | grep -Eq "assets/(slimefun|pylon|rebar|rebarmobs|infinityexpansion|supreme|fluffymachines)/"; then
+            echo "Unexpected non-IAWeapons addon namespace found in release pack" >&2
+            exit 1
+          fi
+          sha1sum SFL_IAWeaponsRP.zip
+          sha256sum SFL_IAWeaponsRP.zip
 
       - name: Publish GitHub release
         shell: bash
@@ -91,22 +89,34 @@ jobs:
         run: |
           set -euo pipefail
 
-          NOTES="Unofficial Slimefun Legacy resource pack release $VERSION.
+          NOTES="SFL IAWeapons Resource Pack $VERSION
 
-          The release pipeline repairs stripped internal namespace references, validates the reachable 26.x model/texture graph, and applies the purple Slimefun Legacy pack icon.
+          Clean IAWeapons-only rebuild for Minecraft Java 1.21.11+.
 
-          Player download asset: SlimefunLegacyRP.zip"
+          Contains:
+          - IAWeapons models, textures and sounds
+          - required crossbow, golden_sword, snowball and stick item definitions
+          - IAWeapons firework-launcher helper models
+          - minimal modern item atlas
+          - updated purple Slimefun pack icon
+
+          Removed:
+          - Slimefun core textures
+          - Pylon / Rebar / RebarMobs
+          - InfinityExpansion / Supreme / other addon assets
+          - unrelated ItemsAdder/ModelEngine content
+
+          Validated through the current 26.3 resource-pack structure.
+
+          Player download asset: SFL_IAWeaponsRP.zip"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" SlimefunLegacyRP.zip --clobber
+            gh release upload "$TAG" SFL_IAWeaponsRP.zip --clobber
           else
-            gh release create "$TAG" SlimefunLegacyRP.zip \
-              --title "Slimefun Legacy Resource Pack $TAG" \
-              --notes "$NOTES" \
-              --latest
+            gh release create "$TAG" SFL_IAWeaponsRP.zip               --title "SFL IAWeapons Resource Pack $TAG"               --notes "$NOTES"               --latest
           fi
 
       - name: Show stable player URL
         shell: bash
         run: |
-          echo "https://github.com/${{ github.repository }}/releases/latest/download/SlimefunLegacyRP.zip"
+          echo "https://github.com/${{ github.repository }}/releases/latest/download/SFL_IAWeaponsRP.zip"
