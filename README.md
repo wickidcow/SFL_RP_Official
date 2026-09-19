@@ -1,81 +1,127 @@
 # Slimefun Legacy Resource Pack
 
-Combined resource pack for **Slimefun Legacy + Pylon + IAWeapons** on Minecraft Java **1.21.11+**.
+Official combined resource pack for **Slimefun Legacy** on modern Minecraft Java.
 
-## Latest player download
+The pack is designed for **Minecraft 1.21.11 through 26.3** and keeps vanilla
+items/blocks intact while providing the custom models used by Slimefun Legacy,
+its supported addons, Pylon/Rebar, Magic, MMOItems, and Slimefun Warfare.
+
+## Permanent player download
 
 ```text
 https://github.com/wickidcow/SFL_RP_Official/releases/latest/download/SlimefunLegacyRP.zip
 ```
 
-## Included
+The release asset name is always **`SlimefunLegacyRP.zip`** so Slimefun Legacy
+can use one stable URL across future resource-pack releases.
 
-- Slimefun Legacy core models/textures
-- Pylon models/textures
-- IAWeapons models/textures/sounds
-- required modern `assets/minecraft/items/` definitions
-- required Pylon/IAWeapons atlas entries
-- required IAWeapons internal helper models
-- Slimefun armor/elytra equipment assets
-- preserved player-head/skull special fallbacks
-- purple Slimefun resource-pack icon
+## Confirmed working baseline
 
-## Removed
+Version: **4.0.0**
 
-Unrelated addon namespaces are intentionally excluded, including:
-
-- Rebar / RebarMobs
-- Supreme
-- InfinityExpansion
-- FluffyMachines
-- Cultivation
-- ExoticGarden
-- Gastronomicon
-- other unrelated generated ItemsAdder/ModelEngine content
-
-## CustomModelData merge
-
-This pack must support two different modern CustomModelData styles at the same time:
-
-- **Slimefun + IAWeapons:** numeric/float CustomModelData
-- **Pylon:** string CustomModelData
-
-The build nests Pylon's string selector around the Slimefun/IAWeapons numeric range dispatcher so all three can safely share vanilla carrier items without overwriting one another.
-
-## Head / skull compatibility
-
-The merged item definitions preserve Minecraft's native special head fallbacks, including the player-head model:
+SHA-1:
 
 ```text
-minecraft:head
-kind: player
+ccb872b7a24984d3e3d0472d963ae0ae1b3fc1e5
 ```
 
-That prevents normal player heads and head-backed guide/category icons from being replaced by missing-model placeholders when no custom mapping matches.
+SHA-256:
 
-## Compatibility
+```text
+1ad615e5a9bd6117e5010255601ddb44451c1ce124fa17c39d376617f775cdb8
+```
 
-- Minecraft Java 1.21.11+
-- modern `assets/minecraft/items/` item definition format
-- validated against the current 26.3 resource-pack layout
-- `pack_format: 75`
-- `min_format: 75`
+The SHA-pinned baseline is also recorded in [BASELINE.json](BASELINE.json).
 
-## Sources
+## Included content
 
-The automated build currently uses:
+The pack keeps Slimefun as the primary resource source and currently includes
+the assets required by:
 
-- the previously validated Slimefun/IAWeapons source release from this repository
-- the official Pylon resource pack release from `pylonmc/pylon-resource-pack`
+- Slimefun Legacy and its bundled/supported addon artwork
+- Pylon
+- Rebar and RebarMobs
+- Magic
+- MMOItems resource-pack content
+- IAWeapons / Slimefun Warfare
+- MC Icons
+- ore texture overrides
+- required Minecraft item definitions, equipment data, aliases, and modern overlays
 
-## Build
+The pack intentionally retains supporting namespaces when a model actually
+depends on them. It does **not** run a global namespace-normalization pass.
+
+## Why the build is conservative
+
+Modern Minecraft separates item and block texture atlases more strictly than
+older resource packs. During 26.x testing, broad atlas reconstruction and
+ItemsAdder alias rewriting caused several regressions, including:
+
+- every placed block rendering as the magenta/black missing texture;
+- vanilla swords, bows, armor and spawn eggs being replaced or missing;
+- player-head-backed guide icons breaking;
+- Golden Sword CustomModelData entries selecting the wrong model;
+- Chainmail inheriting non-vanilla artwork.
+
+The current build system therefore starts from the **last tested, known-good
+release** and applies only explicitly reviewed file changes.
+
+## Updating the pack
+
+Future changes are made in three stages:
+
+1. Put replacement/addition files under `overrides/` using their exact
+   resource-pack paths. Put removals in `deletions.txt`.
+2. GitHub Actions builds a candidate from the SHA-pinned baseline and runs
+   `tools/validate_pack.py`. Download and test the resulting
+   **SlimefunLegacyRP** artifact in Minecraft.
+3. After the candidate is confirmed in-game, publish that exact tested artifact
+   through the release workflow. The release workflow validates the checksum
+   again and uploads it unchanged as `SlimefunLegacyRP.zip`.
+
+The build command used by Actions is equivalent to:
 
 ```bash
-python tools/build_combined_pack.py slimefun-source.zip pylon-source.zip SlimefunLegacyRP.zip
+python tools/update_pack.py base.zip SlimefunLegacyRP.zip \
+  --overrides overrides \
+  --delete-list deletions.txt
+
+python tools/validate_pack.py SlimefunLegacyRP.zip
 ```
 
-The build validates that Slimefun, Pylon, and IAWeapons mappings are all present, that the player-head fallback survived the merge, and that removed addon namespaces are not referenced.
+## Regression checks
+
+`tools/validate_pack.py` currently guards the working behavior that was
+verified during 26.x testing:
+
+- valid ZIP and modern `pack.mcmeta`
+- no deprecated overlay `formats` keys
+- required Slimefun/Pylon/Rebar/Magic/MMOItems/IAWeapons/MC Icons namespaces
+- native player-head fallback remains intact
+- no block sprites imported into the item atlas
+- no item sprites imported into the block atlas
+- Golden Sword keeps its Pylon, IAWeapons, Slimefun and ExtraGear mappings
+- vanilla Golden Sword model/texture overrides are not reintroduced
+- vanilla Chainmail texture overrides are not reintroduced
+- Chainmail item definitions retain their vanilla fallback
+
+## Source priority
+
+When upstream assets conflict, the intended priority is:
+
+1. Slimefun Legacy
+2. Pylon / Rebar / RebarMobs
+3. Magic
+4. MMOItems
+5. IAWeapons / Slimefun Warfare
+6. MC Icons
+7. ore overrides
+
+Large generated ItemsAdder packs are used only as compatibility donors when a
+specific generated model/alias is required; they are not used wholesale as the
+base pack.
 
 ## License
 
-See [LICENSE](LICENSE).
+See [LICENSE](LICENSE) and the licenses of the upstream projects whose assets
+are included.
