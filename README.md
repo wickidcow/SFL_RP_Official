@@ -112,6 +112,64 @@ python tools/update_pack.py base.zip SlimefunLegacyRP.zip \
 python tools/validate_pack.py SlimefunLegacyRP.zip
 ```
 
+## Existing-item identity textures (candidate)
+
+An optional candidate can choose Slimefun textures from the existing
+`slimefun:slimefun_item` persistent string instead of requiring numeric model
+data on saved items. Real guide books use their existing
+`slimefun:slimefun_guide_mode` key. The rules use vanilla component predicates;
+OptiFine is not required on the supported 1.21.11+ clients.
+
+This changes client item definitions only. It does not edit `item-models.yml`,
+rewrite inventories, change IDs, or repair historical stacking mismatches.
+Additional item data such as backpack identities does not prevent a match.
+Items with any explicit `custom_model_data` component keep the original pack's
+selector tree, including numeric and Pylon/Rebar string selectors. This also
+means an explicit empty/zero component is preserved rather than reinterpreted.
+Separate ItemsAdder packs that replace the same carrier definition still need
+to be merged; this does not resolve resource-pack precedence conflicts.
+
+Build from the exact pinned baseline:
+
+```bash
+python tools/update_pack.py base.zip SlimefunLegacyRP-id-candidate.zip \
+  --overrides reviewed-overrides --delete-list deletions.txt \
+  --item-identities tools/slimefun-item-identities.json \
+  --identity-report item-identity-coverage.json
+python tools/validate_pack.py SlimefunLegacyRP-id-candidate.zip
+python -m unittest discover -s tools -p 'test_*.py'
+```
+
+Use an empty `reviewed-overrides` directory when testing only the identity
+change. The **Build Slimefun Legacy Resource Pack** workflow also offers an
+`identity_textures` option, disabled by default. Normal baseline reproduction
+and publication remain separate from this candidate.
+
+The reference map is pinned to a Slimefun Legacy commit in
+`tools/slimefun-item-identities.json`. Its numbers are only used to find the
+existing pack artwork; do **not** install that map on a server. Both baseline
+checksums are required before this build mode proceeds. If the pinned release
+asset is unavailable, supply a copy matching both `BASELINE.json` hashes;
+an older/latest ZIP with different hashes is not an acceptable substitute.
+
+Against the pinned v4.0.0 baseline, the generator adds rules to 295 item
+definitions, covering 1,254 identities. 826 head identities retain native skull
+rendering from their existing profiles; 28 also have non-head carrier rules.
+Together these cover 2,052 unique reference identities. The other 72 mappings
+have no exact numeric entry in this baseline; they are listed in the coverage
+report and retain their existing fallback. No new artwork is invented. The
+reviewed snapshot is in [docs/item-identity-coverage.json](docs/item-identity-coverage.json).
+
+Native heads intentionally avoid a hundreds-deep condition list. Minecraft's
+JSON parser rejects that nesting. Other carriers are capped at 64 rules and
+the build fails if that bound is exceeded. The current maximum is 58.
+
+Before publication, test the **exact candidate ZIP** in-game with old and new
+items, extra persistent data, both guide modes, native player heads, and the
+server's combined ItemsAdder pack. Check both supported client generations,
+texture loading, pack stacking, and normal inventory/machine behavior. A
+successful JSON decode is not a graphical or server integration test.
+
 ## Automatic Pylon update candidates
 
 The repository tracks the last accepted upstream Pylon resource-pack revision in
