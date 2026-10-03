@@ -1,0 +1,98 @@
+name: Host reviewed Slimefun ID preview
+
+on:
+  push:
+    branches: [release/id-pack-preview-20261003]
+    paths: [.github/workflows/host-id-preview.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sfl-id-preview-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'wickidcow/SFL_RP_Official' && github.ref == 'refs/heads/release/id-pack-preview-20261003'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: wickidcow/SFL_RP_Official
+      TAG: v4.1.0-id-preview.1
+      SOURCE_COMMIT: cdf901d101be8e93720df962c9a4d87cff91620f
+      SOURCE_URL: http://overlord.kicks-ass.org:8163/SlimefunLegacyRP-id-candidate.zip
+      EXPECTED_SHA256: 90d20e4693731a2865fd2238d5daf8afb453fbd85e592a07e7d453728bc71bd3
+      EXPECTED_SHA1: 0d667fe74db4a9456aa5a603d71921bfc5a0d6fe
+    steps:
+      - name: Check out reviewed tooling
+        uses: actions/checkout@v4
+        with:
+          ref: cdf901d101be8e93720df962c9a4d87cff91620f
+
+      - name: Verify pack tools
+        run: python -m unittest discover -s tools -p 'test_*.py'
+
+      - name: Fetch the exact owner-tested ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --connect-timeout 15 --max-time 120 --retry 3 "$SOURCE_URL" --output SlimefunLegacyRP.zip
+          echo "$EXPECTED_SHA256  SlimefunLegacyRP.zip" | sha256sum --check -
+          echo "$EXPECTED_SHA1  SlimefunLegacyRP.zip" | sha1sum --check -
+          python tools/validate_pack.py SlimefunLegacyRP.zip --sha256 "$EXPECTED_SHA256"
+          sha256sum SlimefunLegacyRP.zip > SlimefunLegacyRP.sha256
+          sha1sum SlimefunLegacyRP.zip > SlimefunLegacyRP.sha1
+
+      - name: Host the preview without replacing existing assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > preview-notes.md <<'NOTES'
+          This preview reads existing Slimefun item IDs to select textures without rewriting saved inventory data.
+
+          The owner reported successful manual client installation on October 3, 2026. The exact candidate is hosted unchanged. Additional client and combined ItemsAdder testing remains pending.
+
+          - 1,254 identities receive texture rules.
+          - 826 head identities retain native profile rendering (28 overlap other carriers).
+          - 72 unmatched reference mappings retain their fallback.
+          - Existing explicit CustomModelData selectors retain priority.
+          - All 295 changed definitions passed Minecraft 1.21.11's native decoder.
+
+          Source and review: https://github.com/wickidcow/SFL_RP_Official/pull/1
+
+          Preview download:
+          https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.1.0-id-preview.1/SlimefunLegacyRP.zip
+
+          SHA-1: 0d667fe74db4a9456aa5a603d71921bfc5a0d6fe
+          SHA-256: 90d20e4693731a2865fd2238d5daf8afb453fbd85e592a07e7d453728bc71bd3
+
+          This is a prerelease. Use its versioned download URL while testing.
+          NOTES
+          if gh release view "$TAG" --repo "$GH_REPO" >/dev/null 2>&1; then
+            gh release view "$TAG" --repo "$GH_REPO" --json isPrerelease --jq '.isPrerelease' | grep -Fx true
+            gh release download "$TAG" --repo "$GH_REPO" --pattern SlimefunLegacyRP.zip --dir existing
+            cmp --silent SlimefunLegacyRP.zip existing/SlimefunLegacyRP.zip
+            echo "The identical preview is already hosted."
+          else
+            gh release create "$TAG" SlimefunLegacyRP.zip SlimefunLegacyRP.sha1 SlimefunLegacyRP.sha256 \
+              --repo "$GH_REPO" --target "$SOURCE_COMMIT" --prerelease --latest=false \
+              --title "Slimefun Legacy Resource Pack — Existing-ID Preview" --notes-file preview-notes.md
+          fi
+
+      - name: Verify the GitHub download
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://github.com/$GH_REPO/releases/download/$TAG/SlimefunLegacyRP.zip"
+          curl --fail --location --connect-timeout 15 --max-time 120 --retry 3 "$url" --output github-download.zip
+          echo "$EXPECTED_SHA256  github-download.zip" | sha256sum --check -
+          echo "$EXPECTED_SHA1  github-download.zip" | sha1sum --check -
+          cmp --silent SlimefunLegacyRP.zip github-download.zip
+          {
+            echo "### GitHub preview hosted and verified"
+            echo "$url"
+            echo "SHA-1: $EXPECTED_SHA1"
+            echo "SHA-256: $EXPECTED_SHA256"
+          } >> "$GITHUB_STEP_SUMMARY"
