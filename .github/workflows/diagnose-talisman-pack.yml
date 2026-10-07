@@ -27,30 +27,17 @@ jobs:
             --output pack.zip
           unzip -tq pack.zip
 
-      - name: Trace talisman model and atlas graph
+      - name: Build compact 26.3 talisman diagnostic
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p diagnostics
           python - <<'PY'
-          import json, zipfile
-          from pathlib import PurePosixPath
+          import binascii, json, struct, zipfile
 
           TARGETS = {
-              "COMMON_TALISMAN": 2200164,
-              "ANVIL_TALISMAN": 2200165,
               "MINER_TALISMAN": 2200167,
-              "HUNTER_TALISMAN": 2200169,
-              "LAVA_TALISMAN": 2200171,
-              "WATER_TALISMAN": 2200173,
-              "ANGEL_TALISMAN": 2200175,
-              "FIRE_TALISMAN": 2200177,
-              "MAGICIAN_TALISMAN": 2200179,
-              "TRAVELLER_TALISMAN": 2200181,
-              "WARRIOR_TALISMAN": 2200183,
               "KNIGHT_TALISMAN": 2200185,
-              "WHIRLWIND_TALISMAN": 2200193,
-              "WIZARD_TALISMAN": 2200195,
               "CAVEMAN_TALISMAN": 2200529,
               "WISE_TALISMAN": 2200531,
               "FARMER_TALISMAN": 2200545,
@@ -59,8 +46,8 @@ jobs:
           def load_json(zf, name):
               try:
                   return json.loads(zf.read(name).decode("utf-8"))
-              except Exception:
-                  return None
+              except Exception as exc:
+                  return {"__error__": str(exc)}
 
           def walk(obj):
               if isinstance(obj, dict):
@@ -71,125 +58,209 @@ jobs:
                   for v in obj:
                       yield from walk(v)
 
-          def locate(zf, suffix):
-              return [n for n in zf.namelist() if n.endswith(suffix)]
-
-          def ref_for_threshold(itemdef, threshold):
-              if not isinstance(itemdef, dict):
-                  return None
+          def model_entry(itemdef, threshold):
               for node in walk(itemdef):
-                  entries = node.get("entries")
+                  entries = node.get("entries") if isinstance(node, dict) else None
                   if not isinstance(entries, list):
                       continue
                   for entry in entries:
                       if not isinstance(entry, dict):
                           continue
                       try:
-                          value = float(entry.get("threshold"))
+                          if float(entry.get("threshold")) != float(threshold):
+                              continue
                       except (TypeError, ValueError):
                           continue
-                      if value != float(threshold):
-                          continue
-                      model = entry.get("model")
-                      if isinstance(model, dict):
-                          return model.get("model")
-                      if isinstance(model, str):
-                          return model
+                      return entry
               return None
 
-          def model_path(ref):
+          def model_ref(entry):
+              if not isinstance(entry, dict):
+                  return None
+              value = entry.get("model")
+              if isinstance(value, str):
+                  return value
+              if isinstance(value, dict):
+                  return value.get("model")
+              return None
+
+          def res_path(ref, kind):
               if not isinstance(ref, str):
                   return None
               ns, path = ref.split(":", 1) if ":" in ref else ("minecraft", ref)
-              return f"assets/{ns}/models/{path}.json"
+              folder = "models" if kind == "model" else "textures"
+              suffix = ".json" if kind == "model" else ".png"
+              return ns, path, f"assets/{ns}/{folder}/{path}{suffix}"
 
           def texture_refs(model, current_ns):
               out = []
               for node in walk(model):
-                  textures = node.get("textures")
-                  if not isinstance(textures, dict):
+                  tex = node.get("textures") if isinstance(node, dict) else None
+                  if not isinstance(tex, dict):
                       continue
-                  for value in textures.values():
+                  for value in tex.values():
                       if not isinstance(value, str) or value.startswith("#"):
                           continue
                       ns, path = value.split(":", 1) if ":" in value else (current_ns, value)
-                      out.append({
-                          "ref": value,
-                          "namespace": ns,
-                          "logical_path": path,
-                          "file": f"assets/{ns}/textures/{path}.png",
-                      })
+                      out.append((value, ns, path, f"assets/{ns}/textures/{path}.png"))
               return out
 
-          def relevant_atlas_sources(obj):
-              matches = []
-              if not isinstance(obj, dict):
-                  return matches
-              for source in obj.get("sources", []):
-                  if not isinstance(source, dict):
-                      continue
-                  text = json.dumps(source, sort_keys=True)
-                  if "slimefun" in text.lower() or "talisman" in text.lower():
-                      matches.append(source)
-              return matches
+          def png_info(data):
+              if not data.startswith(b"\x89PNG\r\n\x1a\n") or len(data) < 33:
+                  return {"valid_signature": False, "size": len(data)}
+              length = struct.unpack(">I", data[8:12])[0]
+              chunk = data[12:16]
+              if chunk != b"IHDR" or length != 13:
+                  return {"valid_signature": True, "valid_ihdr": False, "size": len(data)}
+              w, h, bit_depth, color_type, comp, filt, interlace = struct.unpack(">IIBBBBB", data[16:29])
+              expected_crc = struct.unpack(">I", data[29:33])[0]
+              actual_crc = binascii.crc32(data[12:29]) & 0xffffffff
+              return {
+                  "valid_signature": True,
+                  "valid_ihdr": expected_crc == actual_crc,
+                  "width": w,
+                  "height": h,
+                  "bit_depth": bit_depth,
+                  "color_type": color_type,
+                  "size": len(data),
+              }
 
-          report = {}
+          def source_covers(source, logical_path, namespace):
+              if not isinstance(source, dict):
+                  return False
+              typ = source.get("type", "")
+              resource = source.get("resource")
+              if typ in ("single", "minecraft:single") and isinstance(resource, str):
+                  rns, rpath = resource.split(":", 1) if ":" in resource else (namespace, resource)
+                  return rns == namespace and rpath == logical_path
+              if typ in ("directory", "minecraft:directory"):
+                  source_dir = source.get("source")
+                  prefix = source.get("prefix", "")
+                  if not isinstance(source_dir, str) or not isinstance(prefix, str):
+                      return False
+                  # Directory source maps textures/<source_dir>/<rest>.png to sprite <prefix><rest>.
+                  if logical_path.startswith(prefix):
+                      rest = logical_path[len(prefix):]
+                      return bool(rest) and (source_dir.rstrip("/") + "/" + rest) == logical_path
+                  # Common generated packs use identical source/prefix roots.
+                  return logical_path.startswith(source_dir.rstrip("/") + "/")
+              return False
+
           with zipfile.ZipFile("pack.zip") as zf:
               names = set(zf.namelist())
-              report["entry_count"] = len(names)
-              report["pack_mcmeta"] = load_json(zf, "pack.mcmeta")
-              report["emerald_itemdefs"] = locate(zf, "assets/minecraft/items/emerald.json")
-              report["items_atlases"] = {}
-              for path in locate(zf, "assets/minecraft/atlases/items.json"):
+              report = {
+                  "pack_mcmeta": load_json(zf, "pack.mcmeta"),
+                  "all_item_atlases": {},
+                  "emerald_itemdefs": {},
+                  "targets": {},
+              }
+
+              # All item atlases, including custom namespaces and overlays.
+              atlas_paths = sorted(n for n in names if n.endswith("/atlases/items.json"))
+              for path in atlas_paths:
+                  report["all_item_atlases"][path] = load_json(zf, path)
+
+              emerald_paths = sorted(n for n in names if n.endswith("assets/minecraft/items/emerald.json"))
+              for path in emerald_paths:
                   obj = load_json(zf, path)
-                  report["items_atlases"][path] = {
-                      "all_sources": obj.get("sources", []) if isinstance(obj, dict) else None,
-                      "slimefun_or_talisman_sources": relevant_atlas_sources(obj),
+                  rows = []
+                  for node in walk(obj):
+                      entries = node.get("entries") if isinstance(node, dict) else None
+                      if not isinstance(entries, list):
+                          continue
+                      for e in entries:
+                          if not isinstance(e, dict):
+                              continue
+                          try:
+                              t = float(e.get("threshold"))
+                          except (TypeError, ValueError):
+                              continue
+                          if 2200155 <= t <= 2200560:
+                              rows.append({"threshold": e.get("threshold"), "model": e.get("model")})
+                  report["emerald_itemdefs"][path] = {
+                      "target_window_entries": rows,
+                      "duplicate_thresholds": sorted({
+                          x["threshold"] for x in rows
+                          if sum(1 for y in rows if y["threshold"] == x["threshold"]) > 1
+                      }, key=str),
                   }
 
-              report["targets"] = {}
               for item_id, threshold in TARGETS.items():
-                  matches = []
-                  for idef in report["emerald_itemdefs"]:
+                  rec = {"threshold": threshold, "itemdefs": []}
+                  texture_resources = []
+                  for idef in emerald_paths:
                       obj = load_json(zf, idef)
-                      ref = ref_for_threshold(obj, threshold)
-                      if not ref:
-                          continue
-                      mp = model_path(ref)
-                      rec = {
-                          "itemdef": idef,
-                          "threshold": threshold,
-                          "model_ref": ref,
-                          "model_file": mp,
-                          "model_exists": mp in names if mp else False,
-                      }
-                      if mp in names:
-                          mo = load_json(zf, mp)
-                          ns = mp.split("/", 2)[1]
-                          textures = texture_refs(mo, ns)
-                          for tex in textures:
-                              tex["exists"] = tex["file"] in names
-                              # Is this texture under the default item-atlas directory?
-                              tex["under_default_item_dir"] = tex["logical_path"].startswith("item/")
-                          rec["textures"] = textures
-                      matches.append(rec)
-                  report["targets"][item_id] = matches
+                      entry = model_entry(obj, threshold)
+                      ref = model_ref(entry)
+                      row = {"itemdef": idef, "entry": entry, "model_ref": ref}
+                      if ref:
+                          mns, mlogical, mfile = res_path(ref, "model")
+                          row["model_file"] = mfile
+                          row["model_exists"] = mfile in names
+                          if mfile in names:
+                              model = load_json(zf, mfile)
+                              row["model_json"] = model
+                              row["textures"] = []
+                              for tref, tns, tlogical, tfile in texture_refs(model, mns):
+                                  tex = {
+                                      "ref": tref,
+                                      "namespace": tns,
+                                      "logical_path": tlogical,
+                                      "file": tfile,
+                                      "exists": tfile in names,
+                                  }
+                                  if tfile in names:
+                                      tex["png"] = png_info(zf.read(tfile))
+                                  coverage = []
+                                  for atlas_path, atlas in report["all_item_atlases"].items():
+                                      # Atlas namespace is the namespace following the nearest assets/ component.
+                                      parts = atlas_path.split("/")
+                                      try:
+                                          ai = parts.index("assets")
+                                          ans = parts[ai + 1]
+                                      except Exception:
+                                          ans = "minecraft"
+                                      if ans != tns or not isinstance(atlas, dict):
+                                          continue
+                                      for source in atlas.get("sources", []):
+                                          if source_covers(source, tlogical, tns):
+                                              coverage.append({"atlas": atlas_path, "source": source})
+                                  tex["atlas_coverage"] = coverage
+                                  texture_resources.append((tns, tlogical))
+                                  row["textures"].append(tex)
+                      rec["itemdefs"].append(row)
+                  report["targets"][item_id] = rec
 
-          with open("diagnostics/talisman-pack-report.json", "w", encoding="utf-8") as fh:
+              # Keep only compact atlas source evidence relevant to Slimefun's odd generated folder.
+              compact_atlases = {}
+              for path, atlas in report["all_item_atlases"].items():
+                  if not isinstance(atlas, dict):
+                      continue
+                  sources = []
+                  for source in atlas.get("sources", []):
+                      text = json.dumps(source, sort_keys=True).lower()
+                      if "slimefun" in text or "talisman" in text:
+                          sources.append(source)
+                  if sources:
+                      compact_atlases[path] = sources
+              report["relevant_atlas_sources"] = compact_atlases
+              del report["all_item_atlases"]
+
+          with open("diagnostics/talisman-pack-compact.json", "w", encoding="utf-8") as fh:
               json.dump(report, fh, indent=2, sort_keys=True)
               fh.write("\n")
           PY
 
-      - name: Commit diagnostic report
+      - name: Commit compact report
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add diagnostics/talisman-pack-report.json
+          git add diagnostics/talisman-pack-compact.json
           if git diff --cached --quiet; then
-            echo "Diagnostic report unchanged."
+            echo "Compact diagnostic unchanged."
             exit 0
           fi
-          git commit -m "diagnostics: inspect talisman atlas coverage [skip ci]"
+          git commit -m "diagnostics: compact talisman pack trace [skip ci]"
           git push
