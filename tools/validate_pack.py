@@ -77,6 +77,141 @@ def model_refs(obj) -> set[str]:
     return refs
 
 
+TALISMAN_ALIAS_MODELS = {
+    "assets/slimefun/models/slimefun/talisman1/caveman.json":
+        "_slimefun:slimefun/talisman1/caveman",
+    "assets/slimefun/models/slimefun/talisman2/caveman.json":
+        "_slimefun:slimefun/talisman2/caveman",
+    "assets/slimefun/models/slimefun/talisman1/wise.json":
+        "_slimefun:slimefun/talisman1/wise",
+    "assets/slimefun/models/slimefun/talisman2/wise.json":
+        "_slimefun:slimefun/talisman2/wise",
+    "assets/slimefun/models/slimefun/talisman1/farmer.json":
+        "_slimefun:slimefun/talisman1/farmer",
+    "assets/slimefun/models/slimefun/talisman2/farmer.json":
+        "_slimefun:slimefun/talisman2/farmer",
+}
+
+
+def texture_refs(obj) -> set[str]:
+    refs: set[str] = set()
+    for node in walk(obj):
+        textures = node.get("textures")
+        if not isinstance(textures, dict):
+            continue
+        for value in textures.values():
+            if isinstance(value, str) and not value.startswith("#"):
+                refs.add(value)
+    return refs
+
+
+def slimefun_sprite_aliases(zf: zipfile.ZipFile, names: set[str], errors: list[str]) -> dict[str, str]:
+    aliases: dict[str, str] = {}
+
+    for name in sorted(n for n in names if n.endswith("assets/minecraft/atlases/items.json")):
+        atlas = parse_json(zf, name, errors)
+        if not isinstance(atlas, dict):
+            continue
+
+        for source in atlas.get("sources", []):
+            if not isinstance(source, dict):
+                continue
+            if source.get("type") not in {"single", "minecraft:single"}:
+                continue
+
+            resource = source.get("resource")
+            sprite = source.get("sprite")
+            if not (
+                isinstance(resource, str)
+                and isinstance(sprite, str)
+                and resource.startswith("slimefun:")
+                and sprite.startswith("_slimefun:")
+            ):
+                continue
+
+            previous = aliases.get(resource)
+            if previous is not None and previous != sprite:
+                fail(
+                    errors,
+                    f"conflicting Slimefun item-atlas aliases for {resource}: {previous} vs {sprite}",
+                )
+            else:
+                aliases[resource] = sprite
+
+    return aliases
+
+
+def check_slimefun_model_aliases(zf: zipfile.ZipFile, names: set[str], errors: list[str]) -> None:
+    aliases = slimefun_sprite_aliases(zf, names, errors)
+    if not aliases:
+        # The modern v4 layout stores Slimefun sprites under item/ and does not need
+        # the historical _slimefun alias layer. There is nothing to validate here.
+        return
+
+    mismatches: list[tuple[str, str, str]] = []
+    for name in sorted(
+        n for n in names if n.startswith("assets/slimefun/models/") and n.endswith(".json")
+    ):
+        model = parse_json(zf, name, errors)
+        if not isinstance(model, dict):
+            continue
+
+        for ref in sorted(texture_refs(model)):
+            expected = aliases.get(ref)
+            if expected is not None:
+                mismatches.append((name, ref, expected))
+
+    if mismatches:
+        examples = "; ".join(
+            f"{name}: {actual} -> {expected}"
+            for name, actual, expected in mismatches[:8]
+        )
+        extra = "" if len(mismatches) <= 8 else f"; ... {len(mismatches) - 8} more"
+        fail(
+            errors,
+            "Slimefun models reference atlas resources instead of their registered "
+            f"_slimefun sprite aliases ({len(mismatches)} reference(s)): {examples}{extra}",
+        )
+
+    # Regression guard for the six exact models reported broken on standalone 26.3.
+    for name, expected in TALISMAN_ALIAS_MODELS.items():
+        if name not in names:
+            continue
+        model = parse_json(zf, name, errors)
+        if not isinstance(model, dict):
+            continue
+        refs = texture_refs(model)
+        if expected not in refs:
+            fail(errors, f"{name} does not reference required sprite alias {expected}")
+
+
+def validate_aliases_only(path: str, expected_sha256: str | None = None) -> list[str]:
+    errors: list[str] = []
+    digest = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    actual_sha256 = digest.hexdigest()
+
+    if expected_sha256 and actual_sha256.lower() != expected_sha256.lower():
+        fail(errors, f"SHA-256 mismatch: expected {expected_sha256}, got {actual_sha256}")
+
+    try:
+        zf = zipfile.ZipFile(path)
+    except zipfile.BadZipFile as exc:
+        return [f"invalid ZIP: {exc}"]
+
+    with zf:
+        bad = zf.testzip()
+        if bad:
+            fail(errors, f"ZIP CRC failure: {bad}")
+        names = {n for n in zf.namelist() if not n.endswith("/")}
+        check_slimefun_model_aliases(zf, names, errors)
+
+    print(f"SHA-256 {actual_sha256}  {path}")
+    return errors
+
+
 def has_player_head_fallback(obj) -> bool:
     for node in walk(obj):
         if node.get("type") == "minecraft:special":
@@ -231,6 +366,7 @@ def validate(path: str, expected_sha256: str | None = None) -> list[str]:
 
         check_golden_sword(zf, errors)
         check_chainmail(zf, errors)
+        check_slimefun_model_aliases(zf, names, errors)
 
     print(f"SHA-256 {actual_sha256}  {path}")
     return errors
@@ -242,9 +378,18 @@ def main() -> int:
     )
     parser.add_argument("pack", help="Path to SlimefunLegacyRP.zip")
     parser.add_argument("--sha256", help="Optional exact SHA-256 expected for this candidate")
+    parser.add_argument(
+        "--aliases-only",
+        action="store_true",
+        help="Validate only ZIP integrity and Slimefun item-atlas sprite aliases",
+    )
     args = parser.parse_args()
 
-    errors = validate(args.pack, args.sha256)
+    errors = (
+        validate_aliases_only(args.pack, args.sha256)
+        if args.aliases_only
+        else validate(args.pack, args.sha256)
+    )
     if errors:
         print("Validation failed:", file=sys.stderr)
         for error in errors:
