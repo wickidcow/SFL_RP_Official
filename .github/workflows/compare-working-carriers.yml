@@ -1,0 +1,104 @@
+name: Compare carrier files to working pack
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/compare-working-carriers.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare published packs to working hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics tmp
+          curl -L --fail --retry 3 -o tmp/v1.zip https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip
+          curl -L --fail --retry 3 -o tmp/v3.zip https://github.com/wickidcow/SFL_RP_Official/releases/download/v3.0.0/SlimefunLegacyRP.zip
+          curl -L --fail --retry 3 -o tmp/preview.zip https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.1.0-id-preview.1/SlimefunLegacyRP.zip
+          curl -L --fail --retry 3 -o tmp/v401.zip https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.1/SlimefunLegacyRP.zip
+
+          python - <<'PY'
+          import hashlib, json, zipfile
+          from pathlib import Path
+
+          expected = {
+            "wooden_hoe":"0be92c1ee8df1e186caf54ed1ec45dad9c2120907db28c421f7acd88877197e4",
+            "leather_helmet":"732a49ae32253c3878f2965fc924a97aea3166eefa64ace64c892271758ccc15",
+            "leather_chestplate":"9cb0cb81b6cb522b03764dee1fc4208d5ed79aebdbf0e76e47f15d17f96c5e42",
+            "leather_leggings":"d644b10e548a5e576d880db3226e166e6edda216fe98adf3d5b00c31f64e37a0",
+            "leather_boots":"a73eaa65335db5cd3c4171b4c22d129396e987e38f837f3c8c448916a2024589",
+            "chainmail_helmet":"89d340c210409064e1707d2011481d5bd0ba887d4a969e1848d6265868ee18b6",
+            "chainmail_chestplate":"13e92f99612764b64a3470716350ab73e978953ff125e93041e8bf492db5c5ed",
+            "chainmail_leggings":"53c3ab981c291f5a7f1332f25441fcb5d9f2b4b23b628414fda264ca456dd540",
+            "chainmail_boots":"cfc91841aa32d732745f91b710a1e711eaf4a6209d42cd82299e4b0326243a0a",
+            "iron_helmet":"7d86e7a413fb68d9c6c0f56d80c93df71eb646e43dbdcc798a7d9207911c9afc",
+            "iron_chestplate":"ebf4bb5b6c33eaca6b3640dffcd637a1488c4d9577464f13172a10f3e6771db2",
+            "iron_leggings":"cce27c287b5963400dfbc835cd835f2b8d425aa145a89cf6328f24a74032c3a3",
+            "iron_boots":"478423d89a8a36b75e98b22023dc2cb5e3a5189dc3f5cd8cdf5a343c595ad465",
+            "golden_helmet":"f2bf1dc14a02e9409ab2370b6afc889886ec5d621735b96243efef0586dcb00c",
+            "golden_chestplate":"eb34972cb939446a417333c8d28771bdb07aaf548017f3524f2633d9b3b0b2a3",
+            "golden_leggings":"ec1b3239c96c58e51bc4c18832bd1dbbab987e417abe298a9c5a3b2d75c16008",
+            "golden_boots":"2bd5194583c9e4e39abf38433612bb8a8bd0536e63329a50b0fbb957a234aebe",
+            "diamond_helmet":"3c096668457d8928d3e873bf770ccb5d15f08159f1edd56340062f92325b31d3",
+            "diamond_chestplate":"f90d586c17d99f5ec5e6358b4b0dbac57aa9277aa4dd35edaaa442ca81a627fb",
+            "diamond_leggings":"ec073714a5d54a5b74f50fbe0ec2927ce35fab3b4cc096b69cd6256300bf20b9",
+            "diamond_boots":"77b1294099978c6239275567754f9959086fe2ff136fb2f924fcfbbefc33a933",
+            "netherite_helmet":"986f5f4d48afe21e83b46616a2b161381b21d366107ccb773c502f21f2e453ed",
+            "netherite_chestplate":"5ee6ef3c22b51328ad191045222634f65428b4e52a8e862e4e506acf67dd2178",
+            "netherite_leggings":"b7a96210d3a4b1fdc037bcb4c29e7d2caf8130af2b7afefdfdfb1d8b6a0a9dca",
+            "netherite_boots":"0816da9aaf1ec8753b854f83c514c6a0b2656af46eb430febbdcd62b1d155f30",
+            "chest":"ad5a7b475d9accdf0d918790bf074c4e922bde7b8a931fab619175e184c47499",
+            "compass":"ceca5e16b66e436a25936cabe852b17e3685a6b17fb9bd72e99c3edf59e6a46a",
+            "clock":"48c50231d6b69ce9f5d65039be2333a9b3cae039f20a9b2843b7daba388550c7",
+            "trident":"cf1d2624b6a25a836f844b9fd410d34f5fc6dff60c8b87b4dd8b08fe810a870d",
+            "crossbow":"83a48bc05d45213e5a32961cf5e283e976517d7ddef6f70a73a945f2cc365d31",
+            "oak_planks":"3c07c9e8f924b72d2ee4638cdc8fc45a2e029182f8fd9415cc2531bdf7a54378"
+          }
+
+          packs = {
+            "v1.0.1":"tmp/v1.zip",
+            "v3.0.0":"tmp/v3.zip",
+            "v4.1.0-id-preview.1":"tmp/preview.zip",
+            "v4.0.1":"tmp/v401.zip",
+          }
+
+          report = {"working_pack_sha256":"1ad615e5a9bd6117e5010255601ddb44451c1ce124fa17c39d376617f775cdb8","targets":{},"pack_meta":{}}
+          for label, path in packs.items():
+            with zipfile.ZipFile(path) as zf:
+              names=set(zf.namelist())
+              meta=json.loads(zf.read("pack.mcmeta"))
+              report["pack_meta"][label]=meta
+              for item, want in expected.items():
+                name=f"assets/minecraft/items/{item}.json"
+                if name not in names:
+                  actual=None
+                else:
+                  actual=hashlib.sha256(zf.read(name)).hexdigest()
+                report["targets"].setdefault(item,{"working_sha256":want})[label]={
+                  "sha256":actual,
+                  "matches_working": actual == want
+                }
+
+          Path("diagnostics/working-carrier-comparison.json").write_text(
+            json.dumps(report,indent=2,sort_keys=True)+"\n",encoding="utf-8"
+          )
+          PY
+
+      - name: Commit report
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diagnostics/working-carrier-comparison.json
+          git commit -m "diagnostics: compare carrier files to working pack [skip ci]"
+          git push
