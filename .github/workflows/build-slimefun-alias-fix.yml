@@ -1,0 +1,162 @@
+name: Build Slimefun standalone alias fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/fix_slimefun_model_aliases.py'
+      - 'tools/test_fix_slimefun_model_aliases.py'
+      - 'tools/validate_pack.py'
+      - '.github/workflows/build-slimefun-alias-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and validate 26.3 standalone fix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Run alias regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/test_fix_slimefun_model_aliases.py
+
+      - name: Download current published standalone pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://github.com/wickidcow/SFL_RP_Official/releases/download/v3.0.0/SlimefunLegacyRP.zip" \
+            --output source.zip
+          echo "c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd  source.zip" | sha256sum --check -
+          unzip -tq source.zip
+
+      - name: Prove current published pack contains the regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          if python tools/validate_pack.py source.zip --aliases-only; then
+            echo "Expected the published v3.0.0 pack to fail the Slimefun sprite-alias regression check." >&2
+            exit 1
+          fi
+          echo "Confirmed: current published v3.0.0 contains the standalone sprite-alias mismatch."
+
+      - name: Repair Slimefun model sprite aliases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/fix_slimefun_model_aliases.py \
+            source.zip \
+            SlimefunLegacyRP.zip \
+            --report SlimefunLegacyRP-alias-fix.json
+
+      - name: Verify repair scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import zipfile
+
+          report = json.load(open("SlimefunLegacyRP-alias-fix.json", encoding="utf-8"))
+          expected = {
+              "sprite_aliases": 578,
+              "changed_models": 703,
+              "changed_texture_references": 764,
+          }
+          actual = {key: report.get(key) for key in expected}
+          if actual != expected:
+              raise SystemExit(f"Unexpected repair scope: {actual!r} != {expected!r}")
+
+          with zipfile.ZipFile("source.zip") as before, zipfile.ZipFile("SlimefunLegacyRP.zip") as after:
+              before_names = set(before.namelist())
+              after_names = set(after.namelist())
+              if before_names != after_names:
+                  missing = sorted(before_names - after_names)[:20]
+                  added = sorted(after_names - before_names)[:20]
+                  raise SystemExit(f"ZIP member set changed; missing={missing!r}, added={added!r}")
+
+              changed = sorted(
+                  name for name in before_names
+                  if not name.endswith("/") and before.read(name) != after.read(name)
+              )
+              unexpected = [
+                  name for name in changed
+                  if not (name.startswith("assets/slimefun/models/") and name.endswith(".json"))
+              ]
+              if unexpected:
+                  raise SystemExit(f"Repair changed non-Slimefun-model files: {unexpected[:20]!r}")
+              if len(changed) != expected["changed_models"]:
+                  raise SystemExit(
+                      f"Changed file count {len(changed)} != {expected['changed_models']}"
+                  )
+
+              required = {
+                  "assets/slimefun/models/slimefun/talisman1/caveman.json":
+                      "_slimefun:slimefun/talisman1/caveman",
+                  "assets/slimefun/models/slimefun/talisman2/caveman.json":
+                      "_slimefun:slimefun/talisman2/caveman",
+                  "assets/slimefun/models/slimefun/talisman1/wise.json":
+                      "_slimefun:slimefun/talisman1/wise",
+                  "assets/slimefun/models/slimefun/talisman2/wise.json":
+                      "_slimefun:slimefun/talisman2/wise",
+                  "assets/slimefun/models/slimefun/talisman1/farmer.json":
+                      "_slimefun:slimefun/talisman1/farmer",
+                  "assets/slimefun/models/slimefun/talisman2/farmer.json":
+                      "_slimefun:slimefun/talisman2/farmer",
+              }
+              for path, sprite in required.items():
+                  model = json.loads(after.read(path))
+                  if model.get("textures", {}).get("layer0") != sprite:
+                      raise SystemExit(f"{path} did not resolve to {sprite}")
+          PY
+
+      - name: Validate repaired aliases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/validate_pack.py SlimefunLegacyRP.zip --aliases-only
+          unzip -tq SlimefunLegacyRP.zip
+          sha1sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha1
+          sha256sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha256
+
+      - name: Summarize candidate
+        shell: bash
+        run: |
+          {
+            echo "## Standalone Slimefun sprite-alias fix"
+            echo
+            echo "- Source: published v3.0.0"
+            echo "- Source SHA-256: c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd"
+            echo "- Atlas aliases discovered: 578"
+            echo "- Slimefun model JSON files changed: 703"
+            echo "- Texture references corrected: 764"
+            echo "- Non-model files changed: 0"
+            echo
+            echo "The reported Farmer, Caveman and Wise talismans plus their Ender variants are explicitly verified."
+            echo
+            echo '~~~text'
+            cat SlimefunLegacyRP.sha1
+            cat SlimefunLegacyRP.sha256
+            echo '~~~'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload candidate for in-game testing
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimefunLegacyRP-AliasFix
+          path: |
+            SlimefunLegacyRP.zip
+            SlimefunLegacyRP.sha1
+            SlimefunLegacyRP.sha256
+            SlimefunLegacyRP-alias-fix.json
+          if-no-files-found: error
+          retention-days: 30
