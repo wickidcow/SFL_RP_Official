@@ -120,13 +120,46 @@ jobs:
               f.write("\n")
           PY
 
+      - name: Analyze actual talisman PNG pixels
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -q pillow
+          python - <<'PY'
+          import json, zipfile
+          from collections import Counter
+          from io import BytesIO
+          from PIL import Image
+
+          names = ["miner","knight","caveman","wise","farmer"]
+          with zipfile.ZipFile("pack.zip") as zf:
+              out={}
+              for name in names:
+                  path=f"assets/slimefun/textures/slimefun/talisman1/{name}.png"
+                  im=Image.open(BytesIO(zf.read(path))).convert("RGBA")
+                  colors=Counter(im.getdata())
+                  out[name]={
+                      "size": list(im.size),
+                      "unique_colors": len(colors),
+                      "top_colors": [
+                          {"rgba": list(rgba), "count": count}
+                          for rgba,count in colors.most_common(12)
+                      ],
+                      "magenta_pixels": sum(c for rgba,c in colors.items() if rgba[:3] in ((255,0,255),(248,0,248))),
+                      "black_pixels": sum(c for rgba,c in colors.items() if rgba[:3] == (0,0,0) and rgba[3] > 0),
+                  }
+          with open("diagnostics/talisman-png-colors.json","w",encoding="utf-8") as f:
+              json.dump(out,f,indent=2,sort_keys=True)
+              f.write("\n")
+          PY
+
       - name: Commit report
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add diagnostics/talisman-effective-26_3.json
+          git add diagnostics/talisman-effective-26_3.json diagnostics/talisman-png-colors.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m "diagnostics: trace effective 26.3 talisman overlays [skip ci]"
+          git commit -m "diagnostics: inspect talisman texture pixels [skip ci]"
           git push
