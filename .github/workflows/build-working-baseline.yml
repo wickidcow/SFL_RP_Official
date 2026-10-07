@@ -1,0 +1,110 @@
+name: Build recovered working RP baseline
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'tools/recover_working_baseline.py'
+      - 'tools/test_recover_working_baseline.py'
+      - '.github/workflows/build-working-baseline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Recover and validate working baseline
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run recovery unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          PYTHONPATH=tools python -m unittest tools/test_recover_working_baseline.py
+
+      - name: Download reviewed identity preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.1.0-id-preview.1/SlimefunLegacyRP.zip" \
+            --output preview.zip
+          echo "90d20e4693731a2865fd2238d5daf8afb453fbd85e592a07e7d453728bc71bd3  preview.zip" | sha256sum --check -
+
+      - name: Recover owner-confirmed working structure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/recover_working_baseline.py \
+            preview.zip \
+            SlimefunLegacyRP.zip \
+            --report recovered-working-report.json
+
+      - name: Validate recovered pack
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -tq SlimefunLegacyRP.zip
+          python tools/validate_pack.py SlimefunLegacyRP.zip
+
+          python - <<'PY'
+          import json, zipfile
+
+          required = {
+              "assets/slimefun/models/item/slimefun/talisman1/caveman.json":
+                  "slimefun:item/slimefun/talisman1/caveman",
+              "assets/slimefun/models/item/slimefun/talisman2/caveman.json":
+                  "slimefun:item/slimefun/talisman2/caveman",
+              "assets/slimefun/models/item/slimefun/talisman1/wise.json":
+                  "slimefun:item/slimefun/talisman1/wise",
+              "assets/slimefun/models/item/slimefun/talisman2/wise.json":
+                  "slimefun:item/slimefun/talisman2/wise",
+              "assets/slimefun/models/item/slimefun/talisman1/farmer.json":
+                  "slimefun:item/slimefun/talisman1/farmer",
+              "assets/slimefun/models/item/slimefun/talisman2/farmer.json":
+                  "slimefun:item/slimefun/talisman2/farmer",
+          }
+
+          with zipfile.ZipFile("SlimefunLegacyRP.zip") as zf:
+              names = set(zf.namelist())
+              for model_path, texture in required.items():
+                  if model_path not in names:
+                      raise SystemExit(f"missing talisman model {model_path}")
+                  data = json.loads(zf.read(model_path))
+                  actual = data.get("textures", {}).get("layer0")
+                  if actual != texture:
+                      raise SystemExit(f"{model_path}: {actual!r} != {texture!r}")
+                  namespace, tex_path = texture.split(":", 1)
+                  png = f"assets/{namespace}/textures/{tex_path}.png"
+                  if png not in names:
+                      raise SystemExit(f"missing talisman texture {png}")
+
+              oak = json.loads(zf.read("assets/minecraft/items/oak_planks.json"))
+              fallback = oak["model"]["fallback"]
+              if fallback.get("model") != "minecraft:block/oak_planks":
+                  raise SystemExit(f"oak_planks lost 3D block fallback: {fallback}")
+
+              crossbow = json.loads(zf.read("assets/minecraft/items/crossbow.json"))
+              if crossbow["model"].get("property") != "minecraft:using_item":
+                  raise SystemExit("crossbow native dynamic model was not restored")
+          PY
+
+          sha1sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha1
+          sha256sum SlimefunLegacyRP.zip | tee SlimefunLegacyRP.sha256
+
+      - name: Upload candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: SlimefunLegacyRP-RecoveredWorking
+          path: |
+            SlimefunLegacyRP.zip
+            SlimefunLegacyRP.sha1
+            SlimefunLegacyRP.sha256
+            recovered-working-report.json
+          if-no-files-found: error
+          retention-days: 30
