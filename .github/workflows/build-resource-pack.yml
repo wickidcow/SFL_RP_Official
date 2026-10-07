@@ -2,6 +2,11 @@ name: Build Slimefun Legacy Resource Pack
 
 on:
   workflow_dispatch:
+    inputs:
+      identity_textures:
+        description: Build the candidate that reads existing Slimefun IDs (requires in-game testing)
+        type: boolean
+        default: false
   push:
     branches:
       - main
@@ -15,6 +20,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  IDENTITY_TEXTURES: ${{ inputs.identity_textures || false }}
 
 jobs:
   build:
@@ -72,11 +80,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          identity_args=()
+          if [[ "$IDENTITY_TEXTURES" == "true" ]]; then
+            identity_args=(--item-identities tools/slimefun-item-identities.json --identity-report item-identity-coverage.json)
+          fi
           python tools/update_pack.py \
             baseline.zip \
             SlimefunLegacyRP.zip \
             --overrides overrides \
-            --delete-list deletions.txt
+            --delete-list deletions.txt \
+            "${identity_args[@]}"
 
       - name: Detect reviewed changes
         if: steps.baseline.outputs.available == 'true'
@@ -85,6 +98,7 @@ jobs:
         run: |
           set -euo pipefail
           python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
           from pathlib import Path
 
           override_files = []
@@ -100,7 +114,7 @@ jobs:
                   if line and not line.startswith("#"):
                       deletions.append(line)
 
-          changed = bool(override_files or deletions)
+          changed = bool(override_files or deletions or os.environ['IDENTITY_TEXTURES'] == 'true')
           print(f"changed={'true' if changed else 'false'}")
           print(f"override_count={len(override_files)}")
           print(f"deletion_count={len(deletions)}")
@@ -135,6 +149,7 @@ jobs:
             echo "- Baseline: v${{ steps.baseline.outputs.version }}"
             echo "- Reviewed overrides: ${{ steps.changes.outputs.override_count }}"
             echo "- Reviewed deletions: ${{ steps.changes.outputs.deletion_count }}"
+            echo "- Existing-item ID rules: $IDENTITY_TEXTURES (candidate only; requires in-game testing)"
             if [[ "${{ steps.changes.outputs.changed }}" == "false" ]]; then
               echo "- Exact baseline reproduction: yes"
             else
@@ -156,5 +171,6 @@ jobs:
             SlimefunLegacyRP.zip
             SlimefunLegacyRP.sha1
             SlimefunLegacyRP.sha256
+            item-identity-coverage.json
           if-no-files-found: error
           retention-days: 30

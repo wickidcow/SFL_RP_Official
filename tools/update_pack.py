@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import shutil
 import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
+
+from item_identity_rules import apply_identity_rules
 
 
 def safe_member(name: str) -> PurePosixPath:
@@ -113,7 +117,24 @@ def main() -> int:
         default=Path("deletions.txt"),
         help="Pack-relative paths to remove",
     )
+    parser.add_argument(
+        "--item-identities", type=Path,
+        help="Add client-only rules using a reviewed Slimefun identity reference",
+    )
+    parser.add_argument(
+        "--identity-report", type=Path,
+        help="Write identity-rule coverage outside the resource pack",
+    )
     args = parser.parse_args()
+
+    if args.identity_report and not args.item_identities:
+        parser.error("--identity-report requires --item-identities")
+    if args.item_identities:
+        pinned = json.loads((Path(__file__).resolve().parents[1] / "BASELINE.json").read_text())
+        baseline = args.base.read_bytes()
+        for algorithm in ("sha1", "sha256"):
+            if hashlib.new(algorithm, baseline).hexdigest() != pinned[algorithm]:
+                parser.error(f"identity rules require the pinned baseline ({algorithm} mismatch)")
 
     deletions = deletion_entries(args.delete_list)
     overrides = override_files(args.overrides)
@@ -122,7 +143,7 @@ def main() -> int:
 
     # Critical regression guard: a no-op build must be the exact tested ZIP,
     # not merely a logically equivalent re-compressed archive.
-    if not deletions and not overrides:
+    if not deletions and not overrides and not args.item_identities:
         if args.output.exists():
             args.output.unlink()
         shutil.copyfile(args.base, args.output)
@@ -135,6 +156,16 @@ def main() -> int:
         extract_safe(args.base, root)
         apply_deletions(root, deletions)
         apply_overrides(root, args.overrides, overrides)
+        if args.item_identities:
+            report = apply_identity_rules(root, args.item_identities)
+            if not report["changed_files"]:
+                raise ValueError("no identity texture rules were generated")
+            print(f"Identity textures: {len(report['textured_ids'])} IDs; "
+                  f"native heads: {len(report['native_head_ids'])}; "
+                  f"unmatched references: {len(report['unmatched_ids'])}")
+            if args.identity_report:
+                args.identity_report.parent.mkdir(parents=True, exist_ok=True)
+                args.identity_report.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
         write_deterministic_zip(root, args.output)
 
     print(
