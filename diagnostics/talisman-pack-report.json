@@ -1,0 +1,383 @@
+{
+  "pack_entries": {
+    "v1": 13729,
+    "v3": 13729
+  },
+  "targets": {
+    "CAVEMAN_TALISMAN": {
+      "threshold": 2200529,
+      "v1": {
+        "emerald_itemdefs": [
+          "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+          "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+          "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json"
+        ],
+        "matches": [
+          {
+            "itemdef": "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/caveman.json",
+            "model_ref": "slimefun:slimefun/talisman1/caveman",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/caveman.png",
+                "ref": "slimefun:slimefun/talisman1/caveman"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/caveman.json",
+            "model_ref": "slimefun:slimefun/talisman1/caveman",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/caveman.png",
+                "ref": "slimefun:slimefun/talisman1/caveman"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/caveman.json",
+            "model_ref": "slimefun:slimefun/talisman1/caveman",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/caveman.png",
+                "ref": "slimefun:slimefun/talisman1/caveman"
+              }
+            ]
+          }
+        ],
+        "named_files": []
+      },
+      "v3": {
+        "emerald_itemdefs": [
+          "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+          "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+          "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json"
+        ],
+        "matches": [
+          {
+            "itemdef": "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/caveman.json",
+            "model_ref": "slimefun:slimefun/talisman1/caveman",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/caveman.png",
+                "ref": "slimefun:slimefun/talisman1/caveman"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/caveman.json",
+            "model_ref": "slimefun:slimefun/talisman1/caveman",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/caveman.png",
+                "ref": "slimefun:slimefun/talisman1/caveman"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/caveman.json",
+            "model_ref": "slimefun:slimefun/talisman1/caveman",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/caveman.png",
+                "ref": "slimefun:slimefun/talisman1/caveman"
+              }
+            ]
+          }
+        ],
+        "named_files": []
+      }
+    },
+    "FARMER_TALISMAN": {
+      "threshold": 2200545,
+      "v1": {
+        "emerald_itemdefs": [
+          "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+          "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+          "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json"
+        ],
+        "matches": [
+          {
+            "itemdef": "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/farmer.json",
+            "model_ref": "slimefun:slimefun/talisman1/farmer",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/farmer.png",
+                "ref": "slimefun:slimefun/talisman1/farmer"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/farmer.json",
+            "model_ref": "slimefun:slimefun/talisman1/farmer",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/farmer.png",
+                "ref": "slimefun:slimefun/talisman1/farmer"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/farmer.json",
+            "model_ref": "slimefun:slimefun/talisman1/farmer",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/farmer.png",
+                "ref": "slimefun:slimefun/talisman1/farmer"
+              }
+            ]
+          }
+        ],
+        "named_files": []
+      },
+      "v3": {
+        "emerald_itemdefs": [
+          "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+          "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+          "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json"
+        ],
+        "matches": [
+          {
+            "itemdef": "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/farmer.json",
+            "model_ref": "slimefun:slimefun/talisman1/farmer",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/farmer.png",
+                "ref": "slimefun:slimefun/talisman1/farmer"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/farmer.json",
+            "model_ref": "slimefun:slimefun/talisman1/farmer",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/farmer.png",
+                "ref": "slimefun:slimefun/talisman1/farmer"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/farmer.json",
+            "model_ref": "slimefun:slimefun/talisman1/farmer",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/farmer.png",
+                "ref": "slimefun:slimefun/talisman1/farmer"
+              }
+            ]
+          }
+        ],
+        "named_files": []
+      }
+    },
+    "WISE_TALISMAN": {
+      "threshold": 2200531,
+      "v1": {
+        "emerald_itemdefs": [
+          "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+          "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+          "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json"
+        ],
+        "matches": [
+          {
+            "itemdef": "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/wise.json",
+            "model_ref": "slimefun:slimefun/talisman1/wise",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/wise.png",
+                "ref": "slimefun:slimefun/talisman1/wise"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/wise.json",
+            "model_ref": "slimefun:slimefun/talisman1/wise",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/wise.png",
+                "ref": "slimefun:slimefun/talisman1/wise"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/wise.json",
+            "model_ref": "slimefun:slimefun/talisman1/wise",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/wise.png",
+                "ref": "slimefun:slimefun/talisman1/wise"
+              }
+            ]
+          }
+        ],
+        "named_files": []
+      },
+      "v3": {
+        "emerald_itemdefs": [
+          "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+          "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+          "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json"
+        ],
+        "matches": [
+          {
+            "itemdef": "ia_overlay_1_21_4_to_5/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/wise.json",
+            "model_ref": "slimefun:slimefun/talisman1/wise",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/wise.png",
+                "ref": "slimefun:slimefun/talisman1/wise"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_1_21_6_plus/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/wise.json",
+            "model_ref": "slimefun:slimefun/talisman1/wise",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/wise.png",
+                "ref": "slimefun:slimefun/talisman1/wise"
+              }
+            ]
+          },
+          {
+            "itemdef": "ia_overlay_modern_atlas/assets/minecraft/items/emerald.json",
+            "model_alias_candidates": [],
+            "model_exists": true,
+            "model_other_pack_alias_candidates": [],
+            "model_path": "assets/slimefun/models/slimefun/talisman1/wise.json",
+            "model_ref": "slimefun:slimefun/talisman1/wise",
+            "textures": [
+              {
+                "alias_candidates": [],
+                "exists": true,
+                "other_pack_alias_candidates": [],
+                "path": "assets/slimefun/textures/slimefun/talisman1/wise.png",
+                "ref": "slimefun:slimefun/talisman1/wise"
+              }
+            ]
+          }
+        ],
+        "named_files": []
+      }
+    }
+  }
+}
