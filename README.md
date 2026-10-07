@@ -22,13 +22,13 @@ Version: **4.0.0**
 SHA-1:
 
 ```text
-ccb872b7a24984d3e3d0472d963ae0ae1b3fc1e5
+b3416868e15581831bac31ae54f6ece80316102d
 ```
 
 SHA-256:
 
 ```text
-1ad615e5a9bd6117e5010255601ddb44451c1ce124fa17c39d376617f775cdb8
+5a70f9fa0fcee4523ec8bbbcc0d8201e1e66c00f180d86e6dde3ab07fda593a3
 ```
 
 The SHA-pinned baseline is also recorded in [BASELINE.json](BASELINE.json).
