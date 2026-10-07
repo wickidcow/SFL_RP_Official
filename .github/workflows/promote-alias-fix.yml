@@ -1,0 +1,119 @@
+name: Promote standalone resource-pack alias fix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/promote-alias-fix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  promote:
+    name: Publish exact validated alias-fix candidate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download exact validated candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p candidate
+          gh run download 37654369821 --repo "$GITHUB_REPOSITORY" --name SlimefunLegacyRP-AliasFix --dir candidate
+          test -f candidate/SlimefunLegacyRP.zip
+          cp candidate/SlimefunLegacyRP.zip SlimefunLegacyRP.zip
+
+      - name: Verify exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "5a70f9fa0fcee4523ec8bbbcc0d8201e1e66c00f180d86e6dde3ab07fda593a3  SlimefunLegacyRP.zip" | sha256sum --check -
+          unzip -tq SlimefunLegacyRP.zip
+          python tools/validate_pack.py SlimefunLegacyRP.zip
+          python tools/validate_pack.py SlimefunLegacyRP.zip --aliases-only
+
+      - name: Publish resource-pack v4.0.0
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > release-notes.md <<'EOF'
+          Slimefun Legacy Official Resource Pack 4.0.0
+
+          Official companion resource pack for Slimefun Legacy.
+
+          Compatibility:
+          - Minecraft Java 1.21.11 through 26.3
+          - Slimefun Legacy 4.1.51+
+
+          Standalone 26.3 texture fix:
+          - Repairs Slimefun sprite-alias resolution used by the modern item atlas.
+          - Corrects 703 Slimefun model JSON files and 764 texture references.
+          - Explicitly verifies Farmer, Caveman and Wise talismans plus their Ender variants.
+          - No non-model files were changed by the repair.
+          - Exact promoted SHA-256: 5a70f9fa0fcee4523ec8bbbcc0d8201e1e66c00f180d86e6dde3ab07fda593a3
+
+          The player-facing asset name remains SlimefunLegacyRP.zip.
+
+          Permanent player download:
+          https://github.com/wickidcow/SFL_RP_Official/releases/latest/download/SlimefunLegacyRP.zip
+          EOF
+
+          if gh release view v4.0.0 >/dev/null 2>&1; then
+            gh release upload v4.0.0 SlimefunLegacyRP.zip --clobber
+            gh release edit v4.0.0 --title "Slimefun Legacy Resource Pack v4.0.0" --notes-file release-notes.md --latest
+          else
+            gh release create v4.0.0 SlimefunLegacyRP.zip --title "Slimefun Legacy Resource Pack v4.0.0" --notes-file release-notes.md --latest
+          fi
+
+      - name: Verify published asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.0/SlimefunLegacyRP.zip" --output published.zip
+          echo "5a70f9fa0fcee4523ec8bbbcc0d8201e1e66c00f180d86e6dde3ab07fda593a3  published.zip" | sha256sum --check -
+
+      - name: Promote exact bytes as repository baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA1="$(sha1sum SlimefunLegacyRP.zip | awk '{print $1}')"
+          python - "$SHA1" <<'PY'
+          import json, re, sys
+          from pathlib import Path
+
+          sha1 = sys.argv[1]
+          sha256 = "5a70f9fa0fcee4523ec8bbbcc0d8201e1e66c00f180d86e6dde3ab07fda593a3"
+          baseline = {
+              "version": "4.0.0",
+              "filename": "SlimefunLegacyRP.zip",
+              "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.0/SlimefunLegacyRP.zip",
+              "sha1": sha1,
+              "sha256": sha256,
+              "notes": "Published standalone 26.3 sprite-alias fix. Exact validated candidate from Actions run 37654369821; Farmer, Caveman and Wise talismans plus Ender variants explicitly covered."
+          }
+          Path("BASELINE.json").write_text(json.dumps(baseline, indent=2) + "\n", encoding="utf-8")
+
+          readme = Path("README.md")
+          text = readme.read_text(encoding="utf-8")
+          text = re.sub(r'(SHA-1:\n\n```text\n)[0-9a-f]{40}(\n```)', rf'\g<1>{sha1}\2', text, count=1)
+          text = re.sub(r'(SHA-256:\n\n```text\n)[0-9a-f]{64}(\n```)', rf'\g<1>{sha256}\2', text, count=1)
+          readme.write_text(text, encoding="utf-8")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BASELINE.json README.md
+          if ! git diff --cached --quiet; then
+            git commit -m "release: promote resource-pack v4.0.0 baseline [skip ci]"
+            git push
+          fi
