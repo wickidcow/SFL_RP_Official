@@ -268,6 +268,23 @@ def has_player_head_fallback(obj) -> bool:
     return False
 
 
+def check_pack_icon(zf: zipfile.ZipFile, errors: list[str]) -> None:
+    try:
+        data = zf.read("pack.png")
+    except KeyError:
+        fail(errors, "missing pack.png")
+        return
+
+    if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        fail(errors, "pack.png is not a valid PNG header")
+        return
+
+    width = int.from_bytes(data[16:20], "big")
+    height = int.from_bytes(data[20:24], "big")
+    if (width, height) != (256, 256):
+        fail(errors, f"pack.png must remain 256x256, got {width}x{height}")
+
+
 def check_pack_meta(meta, errors: list[str]) -> None:
     if not isinstance(meta, dict) or not isinstance(meta.get("pack"), dict):
         fail(errors, "pack.mcmeta does not contain a pack object")
@@ -470,6 +487,7 @@ def validate(path: str, expected_sha256: str | None = None) -> list[str]:
         for namespace in sorted(REQUIRED_NAMESPACES - namespaces):
             fail(errors, f"required namespace missing: assets/{namespace}/")
 
+        check_pack_icon(zf, errors)
         meta = parse_json(zf, "pack.mcmeta", errors)
         if meta is not None:
             check_pack_meta(meta, errors)
