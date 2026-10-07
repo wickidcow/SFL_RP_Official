@@ -2,7 +2,7 @@
   "version": "4.0.1",
   "filename": "SlimefunLegacyRP.zip",
   "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.1/SlimefunLegacyRP.zip",
-  "sha1": "",
+  "sha1": "c945c4436349c8554d44919a6b69cfe129aafec7",
   "sha256": "1b856fff90fe78b7d5964a86a8ed281517d073a082db485d73f31cd07aa64a83",
-  "notes": "Manually approved v4.0.1 resource pack, including the final 256x256 root pack.png. This exact release asset is the baseline for future generated releases."
+  "notes": "Manually approved v4.0.1 resource pack, including the final 256x256 root pack.png. This exact release asset is the baseline for future generated releases. pack.png SHA-256: 07ce5f676801f86eeb61681fe72a9d0c5938941b8524b9e7a56b407ea8c17539"
 }
