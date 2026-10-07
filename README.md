@@ -17,28 +17,39 @@ can use one stable URL across future resource-pack releases.
 
 ## Confirmed working baseline
 
-Version: **4.0.0**
+Version: **4.0.2**
 
 SHA-1:
 
 ```text
-b3416868e15581831bac31ae54f6ece80316102d
+e85e9cad7efc84805a5cf28cea254b031dea5c06
 ```
 
 SHA-256:
 
 ```text
-5a70f9fa0fcee4523ec8bbbcc0d8201e1e66c00f180d86e6dde3ab07fda593a3
+b5aa3859764a5d0d11007af4cfc7d7b239ae8316c27db9ab2fe8edd8c0842740
 ```
 
 The SHA-pinned baseline is also recorded in [BASELINE.json](BASELINE.json).
+
+The server owner's uploaded, previously working pack was independently identified
+as the historical approved v4 reference (`SHA-256
+1ad615e5a9bd6117e5010255601ddb44451c1ce124fa17c39d376617f775cdb8`).
+The v4.0.2 release is the deterministic recovered generation form of that
+working structure, produced by removing only the reviewed 295 client-side
+identity wrappers from the existing-ID preview. This restored the original
+carrier selector trees without falling back to the older ItemsAdder-overlay
+layout.
 
 ## Exact-reproduction rule
 
 The confirmed ZIP is the source of truth.
 
-When there are **no reviewed files under `overrides/` and no active entries in
+When there are **no reviewed pack files under `overrides/` and no active entries in
 `deletions.txt`**, the build does **not** unpack and recompress the archive.
+Repository-only files such as `overrides/README.md` and `.gitkeep` are ignored
+and never become part of a generated pack.
 It copies the pinned working baseline byte-for-byte to
 `SlimefunLegacyRP.zip`.
 
@@ -142,7 +153,7 @@ The accepted Pylon baseline is currently **0.7.1** at commit
 `a7b49d81cd2c640395df376be3af8490958bd54c`.
 
 The confirmed SFL ZIP hashes remain pinned. Automation first tries the pinned
-v4.0.0 asset URL and then the permanent latest-download URL. A downloaded ZIP
+v4.0.2 asset URL and then the permanent latest-download URL. A downloaded ZIP
 is accepted only when **both** its SHA-1 and SHA-256 match the confirmed
 baseline. If neither URL serves those exact bytes, the Pylon workflow stops
 rather than falling back to an older or different resource pack.
@@ -162,6 +173,12 @@ verified during 26.x testing:
 - vanilla Golden Sword model/texture overrides are not reintroduced
 - vanilla Chainmail texture overrides are not reintroduced
 - Chainmail item definitions retain their vanilla fallback
+- the owner-confirmed carrier structures remain intact for wooden hoe, chest,
+  compass, clock, trident, crossbow, and all leather/chainmail/iron/gold/diamond/netherite armor
+- oak planks retain the 3D `minecraft:block/oak_planks` fallback
+- Farmer, Caveman and Wise talismans plus their Ender variants retain the clean
+  working model/texture paths
+- the working overlay layout remains the single reviewed `sfl_26_1_plus` overlay
 
 ## Source priority
 
