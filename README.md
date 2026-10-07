@@ -17,30 +17,34 @@ can use one stable URL across future resource-pack releases.
 
 ## Confirmed working baseline
 
-Version: **4.0.2**
+Version: **4.0.1**
 
 SHA-1:
 
 ```text
-e85e9cad7efc84805a5cf28cea254b031dea5c06
+c945c4436349c8554d44919a6b69cfe129aafec7
 ```
 
 SHA-256:
 
 ```text
-b5aa3859764a5d0d11007af4cfc7d7b239ae8316c27db9ab2fe8edd8c0842740
+1b856fff90fe78b7d5964a86a8ed281517d073a082db485d73f31cd07aa64a83
 ```
 
 The SHA-pinned baseline is also recorded in [BASELINE.json](BASELINE.json).
 
-The server owner's uploaded, previously working pack was independently identified
-as the historical approved v4 reference (`SHA-256
-1ad615e5a9bd6117e5010255601ddb44451c1ce124fa17c39d376617f775cdb8`).
-The v4.0.2 release is the deterministic recovered generation form of that
-working structure, produced by removing only the reviewed 295 client-side
-identity wrappers from the existing-ID preview. This restored the original
-carrier selector trees without falling back to the older ItemsAdder-overlay
-layout.
+The manually approved **v4.0.1** release asset is now the exact source of truth
+for future generated packs. It includes the final **256x256 root `pack.png`**
+chosen for the resource pack.
+
+Approved `pack.png` SHA-256:
+
+```text
+07ce5f676801f86eeb61681fe72a9d0c5938941b8524b9e7a56b407ea8c17539
+```
+
+Future no-change builds reproduce the v4.0.1 ZIP byte-for-byte, so the approved
+icon is retained automatically.
 
 ## Exact-reproduction rule
 
@@ -153,7 +157,7 @@ The accepted Pylon baseline is currently **0.7.1** at commit
 `a7b49d81cd2c640395df376be3af8490958bd54c`.
 
 The confirmed SFL ZIP hashes remain pinned. Automation first tries the pinned
-v4.0.2 asset URL and then the permanent latest-download URL. A downloaded ZIP
+v4.0.1 asset URL and then the permanent latest-download URL. A downloaded ZIP
 is accepted only when **both** its SHA-1 and SHA-256 match the confirmed
 baseline. If neither URL serves those exact bytes, the Pylon workflow stops
 rather than falling back to an older or different resource pack.
