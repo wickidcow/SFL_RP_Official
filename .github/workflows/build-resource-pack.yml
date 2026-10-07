@@ -90,7 +90,11 @@ jobs:
           override_files = []
           overrides = Path("overrides")
           if overrides.exists():
-              override_files = [p for p in overrides.rglob("*") if p.is_file()]
+              ignored = {"README.md", ".gitkeep"}
+              override_files = [
+                  p for p in overrides.rglob("*")
+                  if p.is_file() and p.relative_to(overrides).as_posix() not in ignored
+              ]
 
           deletions = []
           delete_list = Path("deletions.txt")
