@@ -28,6 +28,15 @@ FORBIDDEN_VANILLA_OVERRIDES = {
     "assets/minecraft/textures/item/chainmail_boots.png",
 }
 
+TALISMAN_EMERALD_MODELS = {
+    2200529: "slimefun:caveman_talisman",
+    2200530: "slimefun:ender_caveman_talisman",
+    2200531: "slimefun:wise_talisman",
+    2200532: "slimefun:ender_wise_talisman",
+    2200545: "slimefun:farmer_talisman",
+    2200546: "slimefun:ender_farmer_talisman",
+}
+
 REQUIRED_FILES = {
     "pack.mcmeta",
     "pack.png",
@@ -279,6 +288,97 @@ def check_block_atlas(atlas, errors: list[str]) -> None:
                 fail(errors, f"block atlas source #{i} registers an item sprite: {value}")
 
 
+def custom_model_entries(obj) -> dict[int, str]:
+    entries: dict[int, str] = {}
+    for node in walk(obj):
+        if node.get("type") not in {"range_dispatch", "minecraft:range_dispatch"}:
+            continue
+        if node.get("property") != "minecraft:custom_model_data":
+            continue
+        for entry in node.get("entries", []):
+            if not isinstance(entry, dict):
+                continue
+            threshold = entry.get("threshold")
+            model = entry.get("model")
+            if isinstance(threshold, (int, float)) and isinstance(model, dict):
+                ref = model.get("model")
+                if isinstance(ref, str):
+                    entries[int(threshold)] = ref
+    return entries
+
+
+def check_model_file_exists(zf: zipfile.ZipFile, ref: str, errors: list[str], context: str) -> None:
+    if ":" not in ref:
+        namespace, path = "minecraft", ref
+    else:
+        namespace, path = ref.split(":", 1)
+    if namespace == "minecraft":
+        return
+    name = f"assets/{namespace}/models/{path}.json"
+    if name not in zf.namelist():
+        fail(errors, f"{context} points to missing model: {ref} ({name})")
+
+
+def check_texture_refs(zf: zipfile.ZipFile, model_ref: str, errors: list[str], seen: set[str] | None = None) -> None:
+    if seen is None:
+        seen = set()
+    if model_ref in seen or ":" not in model_ref:
+        return
+    seen.add(model_ref)
+    namespace, path = model_ref.split(":", 1)
+    if namespace == "minecraft":
+        return
+    name = f"assets/{namespace}/models/{path}.json"
+    data = parse_json(zf, name, errors)
+    if not isinstance(data, dict):
+        return
+
+    parent = data.get("parent")
+    if isinstance(parent, str) and ":" in parent and not parent.startswith("minecraft:"):
+        check_model_file_exists(zf, parent, errors, name)
+        check_texture_refs(zf, parent, errors, seen)
+
+    textures = data.get("textures", {})
+    if isinstance(textures, dict):
+        for texture in textures.values():
+            if not isinstance(texture, str) or texture.startswith("#") or ":" not in texture:
+                continue
+            tex_ns, tex_path = texture.split(":", 1)
+            if tex_ns == "minecraft":
+                continue
+            png = f"assets/{tex_ns}/textures/{tex_path}.png"
+            if png not in zf.namelist():
+                fail(errors, f"{name} points to missing texture: {texture} ({png})")
+
+
+def check_talisman_models(zf: zipfile.ZipFile, errors: list[str]) -> None:
+    candidates = [
+        name for name in zf.namelist()
+        if name == "assets/minecraft/items/emerald.json"
+        or name.endswith("/assets/minecraft/items/emerald.json")
+    ]
+    if not candidates:
+        fail(errors, "no emerald item definition found for Slimefun talismans")
+        return
+
+    effective = {}
+    for name in sorted(candidates, key=lambda value: (value.count("/"), value)):
+        data = parse_json(zf, name, errors)
+        if isinstance(data, dict):
+            effective.update(custom_model_entries(data))
+
+    for model_id, expected_ref in TALISMAN_EMERALD_MODELS.items():
+        actual = effective.get(model_id)
+        if actual is None:
+            fail(errors, f"emerald item definition is missing talisman CustomModelData {model_id} -> {expected_ref}")
+            continue
+        if actual != expected_ref:
+            fail(errors, f"emerald CustomModelData {model_id} points to {actual}, expected {expected_ref}")
+            continue
+        check_model_file_exists(zf, actual, errors, f"emerald CustomModelData {model_id}")
+        check_texture_refs(zf, actual, errors)
+
+
 def check_chainmail(zf: zipfile.ZipFile, errors: list[str]) -> None:
     for piece in ("helmet", "chestplate", "leggings", "boots"):
         name = f"assets/minecraft/items/chainmail_{piece}.json"
@@ -366,6 +466,7 @@ def validate(path: str, expected_sha256: str | None = None) -> list[str]:
 
         check_golden_sword(zf, errors)
         check_chainmail(zf, errors)
+        check_talisman_models(zf, errors)
         check_slimefun_model_aliases(zf, names, errors)
 
     print(f"SHA-256 {actual_sha256}  {path}")
