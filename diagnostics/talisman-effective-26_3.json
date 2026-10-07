@@ -1,0 +1,308 @@
+{
+  "active_26_3_dirs": [
+    "",
+    "ia_overlay_1_21_2_plus",
+    "ia_overlay_1_21_4_plus",
+    "ia_overlay_1_21_6_plus",
+    "ia_overlay_modern_atlas",
+    "ia_overlay_26_1_plus",
+    "albion_26_3"
+  ],
+  "atlases": {
+    "albion_26_3/assets/minecraft/atlases/items.json": {
+      "caveman": [
+        {
+          "resource": "slimefun:slimefun/talisman1/caveman",
+          "sprite": "_slimefun:slimefun/talisman1/caveman",
+          "type": "single"
+        }
+      ],
+      "farmer": [
+        {
+          "resource": "slimefun:slimefun/talisman1/farmer",
+          "sprite": "_slimefun:slimefun/talisman1/farmer",
+          "type": "single"
+        }
+      ],
+      "knight": [
+        {
+          "resource": "slimefun:slimefun/talisman1/knight",
+          "sprite": "_slimefun:slimefun/talisman1/knight",
+          "type": "single"
+        }
+      ],
+      "miner": [
+        {
+          "resource": "slimefun:slimefun/talisman1/miner",
+          "sprite": "_slimefun:slimefun/talisman1/miner",
+          "type": "single"
+        }
+      ],
+      "wise": [
+        {
+          "resource": "slimefun:slimefun/talisman1/wise",
+          "sprite": "_slimefun:slimefun/talisman1/wise",
+          "type": "single"
+        }
+      ]
+    },
+    "ia_overlay_26_1_plus/assets/minecraft/atlases/items.json": {
+      "caveman": [
+        {
+          "resource": "slimefun:slimefun/talisman1/caveman",
+          "sprite": "_slimefun:slimefun/talisman1/caveman",
+          "type": "single"
+        }
+      ],
+      "farmer": [
+        {
+          "resource": "slimefun:slimefun/talisman1/farmer",
+          "sprite": "_slimefun:slimefun/talisman1/farmer",
+          "type": "single"
+        }
+      ],
+      "knight": [
+        {
+          "resource": "slimefun:slimefun/talisman1/knight",
+          "sprite": "_slimefun:slimefun/talisman1/knight",
+          "type": "single"
+        }
+      ],
+      "miner": [
+        {
+          "resource": "slimefun:slimefun/talisman1/miner",
+          "sprite": "_slimefun:slimefun/talisman1/miner",
+          "type": "single"
+        }
+      ],
+      "wise": [
+        {
+          "resource": "slimefun:slimefun/talisman1/wise",
+          "sprite": "_slimefun:slimefun/talisman1/wise",
+          "type": "single"
+        }
+      ]
+    },
+    "ia_overlay_modern_atlas/assets/minecraft/atlases/items.json": {
+      "caveman": [
+        {
+          "resource": "slimefun:slimefun/talisman1/caveman",
+          "sprite": "_slimefun:slimefun/talisman1/caveman",
+          "type": "single"
+        }
+      ],
+      "farmer": [
+        {
+          "resource": "slimefun:slimefun/talisman1/farmer",
+          "sprite": "_slimefun:slimefun/talisman1/farmer",
+          "type": "single"
+        }
+      ],
+      "knight": [
+        {
+          "resource": "slimefun:slimefun/talisman1/knight",
+          "sprite": "_slimefun:slimefun/talisman1/knight",
+          "type": "single"
+        }
+      ],
+      "miner": [
+        {
+          "resource": "slimefun:slimefun/talisman1/miner",
+          "sprite": "_slimefun:slimefun/talisman1/miner",
+          "type": "single"
+        }
+      ],
+      "wise": [
+        {
+          "resource": "slimefun:slimefun/talisman1/wise",
+          "sprite": "_slimefun:slimefun/talisman1/wise",
+          "type": "single"
+        }
+      ]
+    }
+  },
+  "models": {
+    "caveman": {
+      "copies": [
+        {
+          "dir": "<root>",
+          "json": {
+            "author": "Jerry",
+            "gui_light": "front",
+            "parent": "minecraft:item/generated",
+            "textures": {
+              "layer0": "slimefun:slimefun/talisman1/caveman",
+              "particle": "#layer0"
+            }
+          },
+          "path": "assets/slimefun/models/slimefun/talisman1/caveman.json"
+        }
+      ],
+      "effective": {
+        "dir": "<root>",
+        "json": {
+          "author": "Jerry",
+          "gui_light": "front",
+          "parent": "minecraft:item/generated",
+          "textures": {
+            "layer0": "slimefun:slimefun/talisman1/caveman",
+            "particle": "#layer0"
+          }
+        },
+        "path": "assets/slimefun/models/slimefun/talisman1/caveman.json"
+      }
+    },
+    "farmer": {
+      "copies": [
+        {
+          "dir": "<root>",
+          "json": {
+            "author": "AnsonYK",
+            "gui_light": "front",
+            "parent": "minecraft:item/generated",
+            "textures": {
+              "layer0": "slimefun:slimefun/talisman1/farmer",
+              "particle": "#layer0"
+            }
+          },
+          "path": "assets/slimefun/models/slimefun/talisman1/farmer.json"
+        }
+      ],
+      "effective": {
+        "dir": "<root>",
+        "json": {
+          "author": "AnsonYK",
+          "gui_light": "front",
+          "parent": "minecraft:item/generated",
+          "textures": {
+            "layer0": "slimefun:slimefun/talisman1/farmer",
+            "particle": "#layer0"
+          }
+        },
+        "path": "assets/slimefun/models/slimefun/talisman1/farmer.json"
+      }
+    },
+    "knight": {
+      "copies": [
+        {
+          "dir": "<root>",
+          "json": {
+            "author": "RaulH22",
+            "gui_light": "front",
+            "parent": "minecraft:item/generated",
+            "textures": {
+              "layer0": "slimefun:slimefun/talisman1/knight",
+              "particle": "#layer0"
+            }
+          },
+          "path": "assets/slimefun/models/slimefun/talisman1/knight.json"
+        }
+      ],
+      "effective": {
+        "dir": "<root>",
+        "json": {
+          "author": "RaulH22",
+          "gui_light": "front",
+          "parent": "minecraft:item/generated",
+          "textures": {
+            "layer0": "slimefun:slimefun/talisman1/knight",
+            "particle": "#layer0"
+          }
+        },
+        "path": "assets/slimefun/models/slimefun/talisman1/knight.json"
+      }
+    },
+    "miner": {
+      "copies": [
+        {
+          "dir": "<root>",
+          "json": {
+            "author": "RaulH22",
+            "gui_light": "front",
+            "parent": "minecraft:item/generated",
+            "textures": {
+              "layer0": "slimefun:slimefun/talisman1/miner",
+              "particle": "#layer0"
+            }
+          },
+          "path": "assets/slimefun/models/slimefun/talisman1/miner.json"
+        }
+      ],
+      "effective": {
+        "dir": "<root>",
+        "json": {
+          "author": "RaulH22",
+          "gui_light": "front",
+          "parent": "minecraft:item/generated",
+          "textures": {
+            "layer0": "slimefun:slimefun/talisman1/miner",
+            "particle": "#layer0"
+          }
+        },
+        "path": "assets/slimefun/models/slimefun/talisman1/miner.json"
+      }
+    },
+    "wise": {
+      "copies": [
+        {
+          "dir": "<root>",
+          "json": {
+            "author": "Jerry",
+            "gui_light": "front",
+            "parent": "minecraft:item/generated",
+            "textures": {
+              "layer0": "slimefun:slimefun/talisman1/wise",
+              "particle": "#layer0"
+            }
+          },
+          "path": "assets/slimefun/models/slimefun/talisman1/wise.json"
+        }
+      ],
+      "effective": {
+        "dir": "<root>",
+        "json": {
+          "author": "Jerry",
+          "gui_light": "front",
+          "parent": "minecraft:item/generated",
+          "textures": {
+            "layer0": "slimefun:slimefun/talisman1/wise",
+            "particle": "#layer0"
+          }
+        },
+        "path": "assets/slimefun/models/slimefun/talisman1/wise.json"
+      }
+    }
+  },
+  "texture_files": {
+    "caveman": {
+      "alias": false,
+      "alias_path": "assets/_slimefun/textures/slimefun/talisman1/caveman.png",
+      "direct": true,
+      "direct_path": "assets/slimefun/textures/slimefun/talisman1/caveman.png"
+    },
+    "farmer": {
+      "alias": false,
+      "alias_path": "assets/_slimefun/textures/slimefun/talisman1/farmer.png",
+      "direct": true,
+      "direct_path": "assets/slimefun/textures/slimefun/talisman1/farmer.png"
+    },
+    "knight": {
+      "alias": false,
+      "alias_path": "assets/_slimefun/textures/slimefun/talisman1/knight.png",
+      "direct": true,
+      "direct_path": "assets/slimefun/textures/slimefun/talisman1/knight.png"
+    },
+    "miner": {
+      "alias": false,
+      "alias_path": "assets/_slimefun/textures/slimefun/talisman1/miner.png",
+      "direct": true,
+      "direct_path": "assets/slimefun/textures/slimefun/talisman1/miner.png"
+    },
+    "wise": {
+      "alias": false,
+      "alias_path": "assets/_slimefun/textures/slimefun/talisman1/wise.png",
+      "direct": true,
+      "direct_path": "assets/slimefun/textures/slimefun/talisman1/wise.png"
+    }
+  }
+}
