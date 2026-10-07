@@ -9,6 +9,7 @@ on:
       - 'overrides/**'
       - 'deletions.txt'
       - 'BASELINE.json'
+      - 'pack.png'
       - 'tools/update_pack.py'
       - 'tools/validate_pack.py'
       - '.github/workflows/build-resource-pack.yml'
@@ -106,10 +107,22 @@ jobs:
                   if line and not line.startswith("#"):
                       deletions.append(line)
 
-          changed = bool(override_files or deletions)
+          icon_changed = False
+          icon = Path("pack.png")
+          if icon.is_file():
+              import zipfile
+              with zipfile.ZipFile("baseline.zip") as zf:
+                  try:
+                      baseline_icon = zf.read("pack.png")
+                  except KeyError:
+                      baseline_icon = None
+              icon_changed = baseline_icon != icon.read_bytes()
+
+          changed = bool(override_files or deletions or icon_changed)
           print(f"changed={'true' if changed else 'false'}")
           print(f"override_count={len(override_files)}")
           print(f"deletion_count={len(deletions)}")
+          print(f"icon_changed={'true' if icon_changed else 'false'}")
           PY
 
       - name: Verify exact no-op reproduction
@@ -143,6 +156,7 @@ jobs:
             echo "- Baseline: v${{ steps.baseline.outputs.version }}"
             echo "- Reviewed overrides: ${{ steps.changes.outputs.override_count }}"
             echo "- Reviewed deletions: ${{ steps.changes.outputs.deletion_count }}"
+            echo "- Root pack.png changed: ${{ steps.changes.outputs.icon_changed }}"
             if [[ "${{ steps.changes.outputs.changed }}" == "false" ]]; then
               echo "- Exact baseline reproduction: yes"
             else
