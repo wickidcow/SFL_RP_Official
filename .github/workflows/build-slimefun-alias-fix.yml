@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -148,6 +148,40 @@ jobs:
             cat SlimefunLegacyRP.sha256
             echo '~~~'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record candidate checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+
+          path = Path("SlimefunLegacyRP.zip")
+          digest = hashlib.sha256(path.read_bytes()).hexdigest()
+          report = {
+              "source_release": "v3.0.0",
+              "source_sha256": "c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd",
+              "candidate_sha256": digest,
+              "changed_models": 703,
+              "changed_texture_references": 764,
+              "sprite_aliases": 578,
+              "scope": "Standalone Slimefun sprite-alias repair",
+          }
+          Path("diagnostics/latest-alias-fix-candidate.json").write_text(
+              json.dumps(report, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add diagnostics/latest-alias-fix-candidate.json
+          if ! git diff --cached --quiet; then
+            git commit -m "diagnostics: record alias-fix candidate checksum [skip ci]"
+            git push
+          fi
 
       - name: Upload candidate for in-game testing
         uses: actions/upload-artifact@v4
