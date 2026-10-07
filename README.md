@@ -122,7 +122,8 @@ The build command used by Actions is equivalent to:
 ```bash
 python tools/update_pack.py base.zip SlimefunLegacyRP.zip \
   --overrides overrides \
-  --delete-list deletions.txt
+  --delete-list deletions.txt \
+  --pack-icon pack.png
 
 python tools/validate_pack.py SlimefunLegacyRP.zip
 ```
