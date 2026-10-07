@@ -1,11 +1,13 @@
 {
-  "caveman": {
+  "talisman1/caveman": {
     "black_pixels": 0,
     "magenta_pixels": 0,
+    "model_exists": true,
     "size": [
       16,
       16
     ],
+    "texture_exists": true,
     "top_colors": [
       {
         "count": 92,
@@ -118,13 +120,15 @@
     ],
     "unique_colors": 13
   },
-  "farmer": {
+  "talisman1/farmer": {
     "black_pixels": 0,
     "magenta_pixels": 0,
+    "model_exists": true,
     "size": [
       16,
       16
     ],
+    "texture_exists": true,
     "top_colors": [
       {
         "count": 83,
@@ -237,13 +241,15 @@
     ],
     "unique_colors": 86
   },
-  "knight": {
+  "talisman1/knight": {
     "black_pixels": 0,
     "magenta_pixels": 0,
+    "model_exists": true,
     "size": [
       16,
       16
     ],
+    "texture_exists": true,
     "top_colors": [
       {
         "count": 92,
@@ -356,13 +362,15 @@
     ],
     "unique_colors": 22
   },
-  "miner": {
+  "talisman1/miner": {
     "black_pixels": 0,
     "magenta_pixels": 0,
+    "model_exists": true,
     "size": [
       16,
       16
     ],
+    "texture_exists": true,
     "top_colors": [
       {
         "count": 92,
@@ -475,13 +483,15 @@
     ],
     "unique_colors": 27
   },
-  "wise": {
+  "talisman1/wise": {
     "black_pixels": 0,
     "magenta_pixels": 0,
+    "model_exists": true,
     "size": [
       16,
       16
     ],
+    "texture_exists": true,
     "top_colors": [
       {
         "count": 92,
@@ -593,5 +603,610 @@
       }
     ],
     "unique_colors": 14
+  },
+  "talisman2/caveman": {
+    "black_pixels": 0,
+    "magenta_pixels": 0,
+    "model_exists": true,
+    "size": [
+      16,
+      16
+    ],
+    "texture_exists": true,
+    "top_colors": [
+      {
+        "count": 92,
+        "rgba": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "count": 25,
+        "rgba": [
+          253,
+          245,
+          95,
+          255
+        ]
+      },
+      {
+        "count": 22,
+        "rgba": [
+          178,
+          100,
+          17,
+          255
+        ]
+      },
+      {
+        "count": 18,
+        "rgba": [
+          111,
+          57,
+          176,
+          255
+        ]
+      },
+      {
+        "count": 18,
+        "rgba": [
+          117,
+          40,
+          2,
+          255
+        ]
+      },
+      {
+        "count": 16,
+        "rgba": [
+          23,
+          25,
+          56,
+          255
+        ]
+      },
+      {
+        "count": 14,
+        "rgba": [
+          233,
+          177,
+          21,
+          255
+        ]
+      },
+      {
+        "count": 13,
+        "rgba": [
+          255,
+          253,
+          224,
+          255
+        ]
+      },
+      {
+        "count": 10,
+        "rgba": [
+          85,
+          35,
+          145,
+          255
+        ]
+      },
+      {
+        "count": 9,
+        "rgba": [
+          253,
+          247,
+          146,
+          255
+        ]
+      },
+      {
+        "count": 6,
+        "rgba": [
+          57,
+          15,
+          108,
+          255
+        ]
+      },
+      {
+        "count": 6,
+        "rgba": [
+          42,
+          9,
+          82,
+          255
+        ]
+      }
+    ],
+    "unique_colors": 14
+  },
+  "talisman2/farmer": {
+    "black_pixels": 0,
+    "magenta_pixels": 0,
+    "model_exists": true,
+    "size": [
+      16,
+      16
+    ],
+    "texture_exists": true,
+    "top_colors": [
+      {
+        "count": 83,
+        "rgba": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "count": 21,
+        "rgba": [
+          253,
+          247,
+          146,
+          255
+        ]
+      },
+      {
+        "count": 20,
+        "rgba": [
+          178,
+          100,
+          17,
+          255
+        ]
+      },
+      {
+        "count": 15,
+        "rgba": [
+          117,
+          40,
+          2,
+          255
+        ]
+      },
+      {
+        "count": 9,
+        "rgba": [
+          40,
+          0,
+          83,
+          255
+        ]
+      },
+      {
+        "count": 7,
+        "rgba": [
+          255,
+          253,
+          224,
+          255
+        ]
+      },
+      {
+        "count": 7,
+        "rgba": [
+          22,
+          0,
+          45,
+          255
+        ]
+      },
+      {
+        "count": 7,
+        "rgba": [
+          233,
+          177,
+          21,
+          255
+        ]
+      },
+      {
+        "count": 3,
+        "rgba": [
+          234,
+          229,
+          135,
+          255
+        ]
+      },
+      {
+        "count": 3,
+        "rgba": [
+          218,
+          65,
+          243,
+          255
+        ]
+      },
+      {
+        "count": 3,
+        "rgba": [
+          194,
+          23,
+          221,
+          255
+        ]
+      },
+      {
+        "count": 3,
+        "rgba": [
+          229,
+          130,
+          246,
+          255
+        ]
+      }
+    ],
+    "unique_colors": 79
+  },
+  "talisman2/knight": {
+    "black_pixels": 0,
+    "magenta_pixels": 0,
+    "model_exists": true,
+    "size": [
+      16,
+      16
+    ],
+    "texture_exists": true,
+    "top_colors": [
+      {
+        "count": 92,
+        "rgba": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "count": 22,
+        "rgba": [
+          178,
+          100,
+          17,
+          255
+        ]
+      },
+      {
+        "count": 22,
+        "rgba": [
+          127,
+          0,
+          0,
+          255
+        ]
+      },
+      {
+        "count": 18,
+        "rgba": [
+          117,
+          40,
+          2,
+          255
+        ]
+      },
+      {
+        "count": 14,
+        "rgba": [
+          253,
+          247,
+          146,
+          255
+        ]
+      },
+      {
+        "count": 14,
+        "rgba": [
+          233,
+          177,
+          21,
+          255
+        ]
+      },
+      {
+        "count": 14,
+        "rgba": [
+          253,
+          245,
+          95,
+          255
+        ]
+      },
+      {
+        "count": 11,
+        "rgba": [
+          255,
+          253,
+          224,
+          255
+        ]
+      },
+      {
+        "count": 9,
+        "rgba": [
+          40,
+          0,
+          83,
+          255
+        ]
+      },
+      {
+        "count": 9,
+        "rgba": [
+          255,
+          0,
+          0,
+          255
+        ]
+      },
+      {
+        "count": 7,
+        "rgba": [
+          22,
+          0,
+          45,
+          255
+        ]
+      },
+      {
+        "count": 5,
+        "rgba": [
+          220,
+          150,
+          19,
+          255
+        ]
+      }
+    ],
+    "unique_colors": 22
+  },
+  "talisman2/miner": {
+    "black_pixels": 0,
+    "magenta_pixels": 0,
+    "model_exists": true,
+    "size": [
+      16,
+      16
+    ],
+    "texture_exists": true,
+    "top_colors": [
+      {
+        "count": 92,
+        "rgba": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "count": 28,
+        "rgba": [
+          253,
+          245,
+          95,
+          255
+        ]
+      },
+      {
+        "count": 19,
+        "rgba": [
+          178,
+          100,
+          17,
+          255
+        ]
+      },
+      {
+        "count": 14,
+        "rgba": [
+          206,
+          206,
+          206,
+          255
+        ]
+      },
+      {
+        "count": 13,
+        "rgba": [
+          117,
+          40,
+          2,
+          255
+        ]
+      },
+      {
+        "count": 12,
+        "rgba": [
+          135,
+          135,
+          135,
+          255
+        ]
+      },
+      {
+        "count": 11,
+        "rgba": [
+          255,
+          253,
+          224,
+          255
+        ]
+      },
+      {
+        "count": 9,
+        "rgba": [
+          40,
+          0,
+          83,
+          255
+        ]
+      },
+      {
+        "count": 8,
+        "rgba": [
+          233,
+          177,
+          21,
+          255
+        ]
+      },
+      {
+        "count": 7,
+        "rgba": [
+          22,
+          0,
+          45,
+          255
+        ]
+      },
+      {
+        "count": 6,
+        "rgba": [
+          253,
+          247,
+          146,
+          255
+        ]
+      },
+      {
+        "count": 4,
+        "rgba": [
+          254,
+          252,
+          223,
+          255
+        ]
+      }
+    ],
+    "unique_colors": 27
+  },
+  "talisman2/wise": {
+    "black_pixels": 0,
+    "magenta_pixels": 0,
+    "model_exists": true,
+    "size": [
+      16,
+      16
+    ],
+    "texture_exists": true,
+    "top_colors": [
+      {
+        "count": 92,
+        "rgba": [
+          0,
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "count": 37,
+        "rgba": [
+          253,
+          245,
+          95,
+          255
+        ]
+      },
+      {
+        "count": 22,
+        "rgba": [
+          178,
+          100,
+          17,
+          255
+        ]
+      },
+      {
+        "count": 18,
+        "rgba": [
+          117,
+          40,
+          2,
+          255
+        ]
+      },
+      {
+        "count": 14,
+        "rgba": [
+          233,
+          177,
+          21,
+          255
+        ]
+      },
+      {
+        "count": 13,
+        "rgba": [
+          255,
+          253,
+          224,
+          255
+        ]
+      },
+      {
+        "count": 13,
+        "rgba": [
+          24,
+          51,
+          129,
+          255
+        ]
+      },
+      {
+        "count": 11,
+        "rgba": [
+          253,
+          247,
+          146,
+          255
+        ]
+      },
+      {
+        "count": 8,
+        "rgba": [
+          7,
+          20,
+          56,
+          255
+        ]
+      },
+      {
+        "count": 5,
+        "rgba": [
+          220,
+          150,
+          19,
+          255
+        ]
+      },
+      {
+        "count": 3,
+        "rgba": [
+          83,
+          20,
+          118,
+          255
+        ]
+      },
+      {
+        "count": 2,
+        "rgba": [
+          153,
+          122,
+          171,
+          255
+        ]
+      }
+    ],
+    "unique_colors": 28
   }
 }
