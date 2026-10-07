@@ -133,12 +133,21 @@ jobs:
 
           names = ["miner","knight","caveman","wise","farmer"]
           with zipfile.ZipFile("pack.zip") as zf:
+              all_names=set(zf.namelist())
               out={}
-              for name in names:
-                  path=f"assets/slimefun/textures/slimefun/talisman1/{name}.png"
+              for tier in ("talisman1","talisman2"):
+                for name in names:
+                  key=f"{tier}/{name}"
+                  path=f"assets/slimefun/textures/slimefun/{tier}/{name}.png"
+                  model=f"assets/slimefun/models/slimefun/{tier}/{name}.json"
+                  if path not in all_names:
+                      out[key]={"texture_exists":False,"model_exists":model in all_names}
+                      continue
                   im=Image.open(BytesIO(zf.read(path))).convert("RGBA")
                   colors=Counter(im.getdata())
-                  out[name]={
+                  out[key]={
+                      "texture_exists": True,
+                      "model_exists": model in all_names,
                       "size": list(im.size),
                       "unique_colors": len(colors),
                       "top_colors": [
