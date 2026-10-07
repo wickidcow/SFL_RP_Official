@@ -126,7 +126,7 @@ jobs:
           import json
           data = json.load(open("BASELINE.json", encoding="utf-8"))
           print(f"url={data['url']}")
-          print(f"sha1={data['sha1']}")
+          print(f"sha1={data.get('sha1', '') or ''}")
           print(f"sha256={data['sha256']}")
           print(f"version={data['version']}")
           PY
@@ -152,10 +152,12 @@ jobs:
               return 1
             fi
 
-            if ! echo "$EXPECTED_SHA1  baseline.zip" | sha1sum --check -; then
-              echo "$label did not match the pinned SHA-1."
-              rm -f baseline.zip
-              return 1
+            if [[ -n "$EXPECTED_SHA1" ]]; then
+              if ! echo "$EXPECTED_SHA1  baseline.zip" | sha1sum --check -; then
+                echo "$label did not match the pinned SHA-1."
+                rm -f baseline.zip
+                return 1
+              fi
             fi
 
             if ! echo "$EXPECTED_SHA256  baseline.zip" | sha256sum --check -; then
