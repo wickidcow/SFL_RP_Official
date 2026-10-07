@@ -77,6 +77,23 @@ def apply_overrides(root: Path, overrides: Path | None, files: list[Path]) -> No
         shutil.copy2(source, target)
 
 
+def pack_icon_changed(base: Path, pack_icon: Path | None) -> bool:
+    if pack_icon is None or not pack_icon.is_file():
+        return False
+    with zipfile.ZipFile(base) as zf:
+        try:
+            current = zf.read("pack.png")
+        except KeyError:
+            return True
+    return current != pack_icon.read_bytes()
+
+
+def apply_pack_icon(root: Path, pack_icon: Path | None) -> None:
+    if pack_icon is None or not pack_icon.is_file():
+        return
+    shutil.copyfile(pack_icon, root / "pack.png")
+
+
 def write_deterministic_zip(root: Path, output: Path) -> None:
     # Fixed timestamps make identical changed input trees deterministic in CI.
     # A true no-op never reaches this function: the known-good ZIP is copied
@@ -122,16 +139,23 @@ def main() -> int:
         default=Path("deletions.txt"),
         help="Pack-relative paths to remove",
     )
+    parser.add_argument(
+        "--pack-icon",
+        type=Path,
+        default=Path("pack.png"),
+        help="Repository-root pack.png applied when it differs from the baseline",
+    )
     args = parser.parse_args()
 
     deletions = deletion_entries(args.delete_list)
     overrides = override_files(args.overrides)
+    icon_changed = pack_icon_changed(args.base, args.pack_icon)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
 
     # Critical regression guard: a no-op build must be the exact tested ZIP,
     # not merely a logically equivalent re-compressed archive.
-    if not deletions and not overrides:
+    if not deletions and not overrides and not icon_changed:
         if args.output.exists():
             args.output.unlink()
         shutil.copyfile(args.base, args.output)
@@ -144,11 +168,13 @@ def main() -> int:
         extract_safe(args.base, root)
         apply_deletions(root, deletions)
         apply_overrides(root, args.overrides, overrides)
+        apply_pack_icon(root, args.pack_icon)
         write_deterministic_zip(root, args.output)
 
     print(
-        f"Built reviewed candidate with {len(overrides)} override file(s) "
-        f"and {len(deletions)} deletion(s): {args.output}"
+        f"Built reviewed candidate with {len(overrides)} override file(s), "
+        f"{len(deletions)} deletion(s), and "
+        f"{'a changed' if icon_changed else 'the existing'} pack icon: {args.output}"
     )
     return 0
 
