@@ -34,7 +34,7 @@ jobs:
           import json
           data = json.load(open("BASELINE.json", encoding="utf-8"))
           print(f"url={data['url']}")
-          print(f"sha1={data['sha1']}")
+          print(f"sha1={data.get('sha1', '') or ''}")
           print(f"sha256={data['sha256']}")
           print(f"version={data['version']}")
           print(f"available={'true' if data.get('source_available', True) else 'false'}")
@@ -65,7 +65,9 @@ jobs:
             baseline.zip \
             --sha256 "${{ steps.baseline.outputs.sha256 }}"
 
-          echo "${{ steps.baseline.outputs.sha1 }}  baseline.zip" | sha1sum --check -
+          if [[ -n "${{ steps.baseline.outputs.sha1 }}" ]]; then
+            echo "${{ steps.baseline.outputs.sha1 }}  baseline.zip" | sha1sum --check -
+          fi
 
       - name: Apply reviewed updates
         if: steps.baseline.outputs.available == 'true'
@@ -116,7 +118,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "${{ steps.baseline.outputs.sha1 }}  SlimefunLegacyRP.zip" | sha1sum --check -
+          if [[ -n "${{ steps.baseline.outputs.sha1 }}" ]]; then
+            echo "${{ steps.baseline.outputs.sha1 }}  SlimefunLegacyRP.zip" | sha1sum --check -
+          fi
           echo "${{ steps.baseline.outputs.sha256 }}  SlimefunLegacyRP.zip" | sha256sum --check -
 
           cmp --silent baseline.zip SlimefunLegacyRP.zip
