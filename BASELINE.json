@@ -1,8 +1,8 @@
 {
-  "version": "4.0.1",
+  "version": "4.0.2",
   "filename": "SlimefunLegacyRP.zip",
-  "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.1/SlimefunLegacyRP.zip",
-  "sha1": "5e8269f97ec875287e983eff0e59cc3b7f6e85e7",
-  "sha256": "a2cfbd4940312cd85e298ce233d07e9aae190cda6addbd2c0fbef603545729d1",
-  "notes": "Scoped 26.3 talisman hotfix based directly on v3.0.0. Only Farmer/Caveman/Wise talisman model JSONs and their Ender variants changed; broad v4.0.0 alias rewrite retired."
+  "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.2/SlimefunLegacyRP.zip",
+  "sha1": "e85e9cad7efc84805a5cf28cea254b031dea5c06",
+  "sha256": "b5aa3859764a5d0d11007af4cfc7d7b239ae8316c27db9ab2fe8edd8c0842740",
+  "notes": "Recovered owner-confirmed working generation structure. Carrier/armor/oak-planks/talisman regressions are guarded; replaces v3-derived v4.0.0/v4.0.1 experiments."
 }
