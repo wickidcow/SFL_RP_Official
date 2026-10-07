@@ -28,6 +28,53 @@ FORBIDDEN_VANILLA_OVERRIDES = {
     "assets/minecraft/textures/item/chainmail_boots.png",
 }
 
+WORKING_CARRIER_CANONICAL_HASHES = {
+    "wooden_hoe": "bfcc45f5695719851f8e1fecde1de34ae224ddf23c3faefdeda25eb880fe7405",
+    "leather_helmet": "034059c6b4774bfad32ba97770b55ec2791c34f6267076282c302d6ee4b6aa3c",
+    "leather_chestplate": "36dd7f46f3c4c5d96226fc6617a5e02dbedcf88cb9e1904b3c0152b6ad7a7f97",
+    "leather_leggings": "d6c7e7809544ae0e38d2ac246f7e32d1d0b357244548144517e702e3337c0b85",
+    "leather_boots": "60154970567cc840f751b37e20a7ca9326d2a17a2fe967555ac1fe488bc038db",
+    "chainmail_helmet": "11f438f2c5580e84a44a9708fb48cdab4d08d7de6aaac0448a26c05c82560dbd",
+    "chainmail_chestplate": "35481d4896f4ffb0679b99b71f72877ff26591651d69ac2db2118dca5afc9f16",
+    "chainmail_leggings": "ecbb1ec93999c908897819fd5964456d8cf893de6471b822aa841e26102060aa",
+    "chainmail_boots": "7506442a7a516ee83b95ec7057ff032c09d23b0d41fb2dca406985889561622a",
+    "iron_helmet": "12091578f3ce329e3f96ae16cf9789d2bd4881756d03f4a48245df84f13e159f",
+    "iron_chestplate": "41b84abd369f95f5130219c9f70bc9ff264ccd95976a26d42670d00f47b3682d",
+    "iron_leggings": "fa7ffa8397bb0a97fcfc31905e4c91144b364941f0d1005de5fdeb0e5c670dcb",
+    "iron_boots": "cf4ed8ffc4813c035ee989d36a23c43ca542732fdda3784b378b251c94e568eb",
+    "golden_helmet": "b9fed125d755dda3af231c04f54d96e24df04be75dbe2a2c9b1cbdc6b2268feb",
+    "golden_chestplate": "3e93da542da00eb467ec39e5d0c3b4ab6581d97e2b94b893da7c97e8c92bd6c2",
+    "golden_leggings": "416a8ff1e4d6db578c30fd717ccf862c1edaea967333940f83c1c7e006d2d678",
+    "golden_boots": "a6045ef80e5543ab5d1f3fce67fccebc17dfdd4cfaa468ab473904769119070b",
+    "diamond_helmet": "cc00d7fa13bd0152300df88934ec6744291d2828d3999618bac112f584664cf1",
+    "diamond_chestplate": "146c09ecb8b5b10dc9a76297feb7911250ef1b33dc8404a58315901704bf33d5",
+    "diamond_leggings": "4fc479ea6851283c295b239898677560dba80f3466f5774aea6550ea273ea60a",
+    "diamond_boots": "06a2ba5e6963820dbf730a6ff5e7261fbb6bed9661b76c8590de6dd0766d87bf",
+    "netherite_helmet": "bb3f588be3a9e61723976ae1ae2d46af24f4bd1857a3233deab7bd8248fe5f53",
+    "netherite_chestplate": "12f8b3e162e2002b4e72daf26ff53c462ae3ef01dc1d8e6502be13749fc36cbf",
+    "netherite_leggings": "0867d8fa357cf4df08acab694f6f9616ef7472c689bbf08a7b5b28f1ae67f359",
+    "netherite_boots": "7e38e806a0c73d990559f216d98f1851c395dc67c0d37cb81638258e9b039908",
+    "chest": "6ff2b5e74b8f48e3cb4004ad21efe81e0702ea3f428952a5122b1904991ce09a",
+    "compass": "046d13cf9974feace0a653e1e4b2c88c116d09a5314205c62c008e2d223b075d",
+    "clock": "2d0730b07250fc378d5c73962ffbb47b42fcb84daeb646d5c675681a05655c8f",
+    "trident": "6e5d10ede46cc679a8f06f2cc5d1e02234ca252e3a5c90f02923ae8b07aabef2",
+    "crossbow": "0ef4c367408e9f43640d9ddf579b4d942734edf61bfc5b3f590ca65b6de17a44",
+    "oak_planks": "7873bd6583edb6a17615f5492b8f01b836cdff7b8978ae1198f248fc107f4eaf",
+}
+
+WORKING_OVERLAYS = [
+    {"directory": "sfl_26_1_plus", "min_format": 84, "max_format": 9999},
+]
+
+WORKING_TALISMAN_MODELS = {
+    "assets/slimefun/models/item/slimefun/talisman1/caveman.json": "slimefun:item/slimefun/talisman1/caveman",
+    "assets/slimefun/models/item/slimefun/talisman2/caveman.json": "slimefun:item/slimefun/talisman2/caveman",
+    "assets/slimefun/models/item/slimefun/talisman1/wise.json": "slimefun:item/slimefun/talisman1/wise",
+    "assets/slimefun/models/item/slimefun/talisman2/wise.json": "slimefun:item/slimefun/talisman2/wise",
+    "assets/slimefun/models/item/slimefun/talisman1/farmer.json": "slimefun:item/slimefun/talisman1/farmer",
+    "assets/slimefun/models/item/slimefun/talisman2/farmer.json": "slimefun:item/slimefun/talisman2/farmer",
+}
+
 REQUIRED_FILES = {
     "pack.mcmeta",
     "pack.png",
@@ -279,6 +326,81 @@ def check_block_atlas(atlas, errors: list[str]) -> None:
                 fail(errors, f"block atlas source #{i} registers an item sprite: {value}")
 
 
+def _is_identity_wrapper(model) -> bool:
+    if not isinstance(model, dict):
+        return False
+    kind = str(model.get("type", "")).removeprefix("minecraft:")
+    prop = str(model.get("property", "")).removeprefix("minecraft:")
+    component = str(model.get("component", "")).removeprefix("minecraft:")
+    if kind != "condition" or prop != "has_component" or component != "custom_model_data":
+        return False
+    if not isinstance(model.get("on_true"), dict) or not isinstance(model.get("on_false"), dict):
+        return False
+    node = model["on_false"]
+    while isinstance(node, dict):
+        node_kind = str(node.get("type", "")).removeprefix("minecraft:")
+        node_prop = str(node.get("property", "")).removeprefix("minecraft:")
+        if node_kind != "condition":
+            return False
+        if node_prop == "component" and node.get("predicate") == "minecraft:custom_data":
+            value = node.get("value")
+            if isinstance(value, dict) and isinstance(value.get("PublicBukkitValues"), dict):
+                return True
+        node = node.get("on_false")
+    return False
+
+
+def _working_document(document):
+    if not isinstance(document, dict):
+        return document
+    model = document.get("model")
+    if _is_identity_wrapper(model):
+        document = dict(document)
+        document["model"] = model["on_true"]
+    return document
+
+
+def _canonical_hash(document) -> str:
+    payload = json.dumps(document, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def check_working_generation(zf: zipfile.ZipFile, meta, errors: list[str]) -> None:
+    overlays = meta.get("overlays", {}).get("entries", []) if isinstance(meta, dict) else []
+    if overlays != WORKING_OVERLAYS:
+        fail(errors, f"working overlay layout changed: {overlays!r}")
+
+    names = set(zf.namelist())
+    for item, expected in WORKING_CARRIER_CANONICAL_HASHES.items():
+        name = f"assets/minecraft/items/{item}.json"
+        data = parse_json(zf, name, errors)
+        if not isinstance(data, dict):
+            continue
+        actual = _canonical_hash(_working_document(data))
+        if actual != expected:
+            fail(errors, f"{name} no longer matches owner-confirmed working carrier structure")
+
+    for model_path, texture in WORKING_TALISMAN_MODELS.items():
+        data = parse_json(zf, model_path, errors)
+        if not isinstance(data, dict):
+            continue
+        actual = data.get("textures", {}).get("layer0")
+        if actual != texture:
+            fail(errors, f"{model_path} texture changed: {actual!r} != {texture!r}")
+            continue
+        namespace, rel = texture.split(":", 1)
+        png = f"assets/{namespace}/textures/{rel}.png"
+        if png not in names:
+            fail(errors, f"{model_path} points to missing texture {png}")
+
+    oak = parse_json(zf, "assets/minecraft/items/oak_planks.json", errors)
+    if isinstance(oak, dict):
+        model = _working_document(oak).get("model", {})
+        fallback = model.get("fallback", {}) if isinstance(model, dict) else {}
+        if fallback.get("model") != "minecraft:block/oak_planks":
+            fail(errors, "oak_planks lost its 3D minecraft:block/oak_planks fallback")
+
+
 def check_chainmail(zf: zipfile.ZipFile, errors: list[str]) -> None:
     for piece in ("helmet", "chestplate", "leggings", "boots"):
         name = f"assets/minecraft/items/chainmail_{piece}.json"
@@ -351,6 +473,7 @@ def validate(path: str, expected_sha256: str | None = None) -> list[str]:
         meta = parse_json(zf, "pack.mcmeta", errors)
         if meta is not None:
             check_pack_meta(meta, errors)
+            check_working_generation(zf, meta, errors)
 
         item_atlas = parse_json(zf, "assets/minecraft/atlases/items.json", errors)
         if item_atlas is not None:
