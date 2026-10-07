@@ -1,8 +1,8 @@
 {
-  "version": "4.0.2",
+  "version": "4.0.1",
   "filename": "SlimefunLegacyRP.zip",
-  "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.2/SlimefunLegacyRP.zip",
-  "sha1": "e85e9cad7efc84805a5cf28cea254b031dea5c06",
-  "sha256": "b5aa3859764a5d0d11007af4cfc7d7b239ae8316c27db9ab2fe8edd8c0842740",
-  "notes": "Recovered owner-confirmed working generation structure. Carrier/armor/oak-planks/talisman regressions are guarded; replaces v3-derived v4.0.0/v4.0.1 experiments."
+  "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.1/SlimefunLegacyRP.zip",
+  "sha1": "",
+  "sha256": "1b856fff90fe78b7d5964a86a8ed281517d073a082db485d73f31cd07aa64a83",
+  "notes": "Manually approved v4.0.1 resource pack, including the final 256x256 root pack.png. This exact release asset is the baseline for future generated releases."
 }
