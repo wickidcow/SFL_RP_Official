@@ -1,0 +1,251 @@
+name: Publish scoped talisman RP hotfix
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-scoped-talisman-hotfix.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-publish:
+    name: Build and publish scoped v4.0.1 hotfix
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download known-good v3 baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2             "https://github.com/wickidcow/SFL_RP_Official/releases/download/v3.0.0/SlimefunLegacyRP.zip"             --output source.zip
+          echo "c2c08909186ab96a2eeb14e825de92db06ffb9c2b87399feefc05df3506f15cd  source.zip" | sha256sum --check -
+          unzip -tq source.zip
+
+      - name: Patch only the six reported talisman models
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, tempfile, zipfile
+          from pathlib import Path
+
+          targets = {
+              "assets/slimefun/models/slimefun/talisman1/caveman.json": "_slimefun:slimefun/talisman1/caveman",
+              "assets/slimefun/models/slimefun/talisman2/caveman.json": "_slimefun:slimefun/talisman2/caveman",
+              "assets/slimefun/models/slimefun/talisman1/wise.json": "_slimefun:slimefun/talisman1/wise",
+              "assets/slimefun/models/slimefun/talisman2/wise.json": "_slimefun:slimefun/talisman2/wise",
+              "assets/slimefun/models/slimefun/talisman1/farmer.json": "_slimefun:slimefun/talisman1/farmer",
+              "assets/slimefun/models/slimefun/talisman2/farmer.json": "_slimefun:slimefun/talisman2/farmer",
+          }
+
+          with zipfile.ZipFile("source.zip") as zf:
+              infos = zf.infolist()
+              payloads = {i.filename: zf.read(i.filename) for i in infos if not i.is_dir()}
+
+          missing = sorted(set(targets) - set(payloads))
+          if missing:
+              raise SystemExit(f"Missing target models: {missing}")
+
+          for path, expected in targets.items():
+              data = json.loads(payloads[path].decode("utf-8"))
+              textures = data.get("textures")
+              if not isinstance(textures, dict):
+                  raise SystemExit(f"{path} has no textures map")
+              logical = expected.replace("_slimefun:", "slimefun:", 1)
+              changed = 0
+              for key, value in list(textures.items()):
+                  if value == logical:
+                      textures[key] = expected
+                      changed += 1
+              if changed != 1:
+                  raise SystemExit(f"{path}: expected exactly one {logical} reference, changed {changed}")
+              payloads[path] = (json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n").encode("utf-8")
+
+          epoch = (2026, 1, 1, 0, 0, 0)
+          with zipfile.ZipFile("SlimefunLegacyRP.zip", "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as out:
+              for info in infos:
+                  if info.is_dir():
+                      continue
+                  zi = zipfile.ZipInfo(info.filename, date_time=epoch)
+                  zi.compress_type = zipfile.ZIP_DEFLATED
+                  zi.external_attr = 0o100644 << 16
+                  out.writestr(zi, payloads[info.filename], compress_type=zipfile.ZIP_DEFLATED, compresslevel=9)
+          PY
+
+      - name: Verify exact repair scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, zipfile
+
+          expected = {
+              "assets/slimefun/models/slimefun/talisman1/caveman.json": "_slimefun:slimefun/talisman1/caveman",
+              "assets/slimefun/models/slimefun/talisman2/caveman.json": "_slimefun:slimefun/talisman2/caveman",
+              "assets/slimefun/models/slimefun/talisman1/wise.json": "_slimefun:slimefun/talisman1/wise",
+              "assets/slimefun/models/slimefun/talisman2/wise.json": "_slimefun:slimefun/talisman2/wise",
+              "assets/slimefun/models/slimefun/talisman1/farmer.json": "_slimefun:slimefun/talisman1/farmer",
+              "assets/slimefun/models/slimefun/talisman2/farmer.json": "_slimefun:slimefun/talisman2/farmer",
+          }
+
+          with zipfile.ZipFile("source.zip") as before, zipfile.ZipFile("SlimefunLegacyRP.zip") as after:
+              before_names = {n for n in before.namelist() if not n.endswith("/")}
+              after_names = {n for n in after.namelist() if not n.endswith("/")}
+              if before_names != after_names:
+                  raise SystemExit("ZIP member set changed")
+
+              changed = sorted(n for n in before_names if before.read(n) != after.read(n))
+              if changed != sorted(expected):
+                  raise SystemExit(f"Unexpected changed files: {changed}")
+
+              for path, sprite in expected.items():
+                  data = json.loads(after.read(path))
+                  refs = set(v for v in data.get("textures", {}).values() if isinstance(v, str))
+                  if sprite not in refs:
+                      raise SystemExit(f"{path} missing required sprite alias {sprite}")
+
+              # Ensure representative items reported newly broken are byte-for-byte unchanged.
+              untouched_markers = [
+                  "wooden_hoe", "leather_chestplate", "chest", "compass", "clock",
+                  "leather_leggings", "trident", "chainmail_chestplate", "iron_helmet",
+                  "iron_chestplate", "diamond", "netherite", "gold", "crossbow", "oak_planks"
+              ]
+              for marker in untouched_markers:
+                  touched = [n for n in changed if marker in n]
+                  if touched:
+                      raise SystemExit(f"Unexpected change for reported regression marker {marker}: {touched}")
+          PY
+
+      - name: Verify active 26.3 atlas aliases for all six models
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, zipfile
+
+          logicals = {
+              "slimefun:slimefun/talisman1/caveman": "_slimefun:slimefun/talisman1/caveman",
+              "slimefun:slimefun/talisman2/caveman": "_slimefun:slimefun/talisman2/caveman",
+              "slimefun:slimefun/talisman1/wise": "_slimefun:slimefun/talisman1/wise",
+              "slimefun:slimefun/talisman2/wise": "_slimefun:slimefun/talisman2/wise",
+              "slimefun:slimefun/talisman1/farmer": "_slimefun:slimefun/talisman1/farmer",
+              "slimefun:slimefun/talisman2/farmer": "_slimefun:slimefun/talisman2/farmer",
+          }
+
+          def asnum(v):
+              if isinstance(v, list) and len(v) >= 2:
+                  return float(f"{v[0]}.{v[1]}")
+              try:
+                  return float(v)
+              except Exception:
+                  return None
+
+          with zipfile.ZipFile("SlimefunLegacyRP.zip") as zf:
+              names = set(zf.namelist())
+              meta = json.loads(zf.read("pack.mcmeta"))
+              active = [""]
+              for entry in meta.get("overlays", {}).get("entries", []):
+                  lo, hi = asnum(entry.get("min_format")), asnum(entry.get("max_format"))
+                  if lo is not None and hi is not None and lo <= 97.1 <= hi:
+                      active.append(entry["directory"])
+
+              found = set()
+              for directory in active:
+                  path = (directory + "/" if directory else "") + "assets/minecraft/atlases/items.json"
+                  if path not in names:
+                      continue
+                  atlas = json.loads(zf.read(path))
+                  for source in atlas.get("sources", []):
+                      if not isinstance(source, dict):
+                          continue
+                      resource, sprite = source.get("resource"), source.get("sprite")
+                      if resource in logicals and sprite == logicals[resource]:
+                          found.add(resource)
+
+              missing = sorted(set(logicals) - found)
+              if missing:
+                  raise SystemExit(f"26.3 active atlases are missing aliases: {missing}")
+          PY
+
+      - name: Hash candidate
+        id: hash
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHA1="$(sha1sum SlimefunLegacyRP.zip | awk '{print $1}')"
+          SHA256="$(sha256sum SlimefunLegacyRP.zip | awk '{print $1}')"
+          echo "sha1=$SHA1" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "$SHA1  SlimefunLegacyRP.zip"
+          echo "$SHA256  SlimefunLegacyRP.zip"
+
+      - name: Publish v4.0.1 scoped hotfix
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA256: ${{ steps.hash.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          cat > release-notes.md <<EOF
+          Slimefun Legacy Official Resource Pack 4.0.1
+
+          Scoped Minecraft 26.3 talisman hotfix based directly on the known-good v3.0.0 pack.
+
+          This replaces the overly broad v4.0.0 alias rewrite. Only six Slimefun model JSON files are changed:
+          - Farmer Talisman + Ender Farmer Talisman
+          - Caveman Talisman + Ender Caveman Talisman
+          - Wise Talisman + Ender Wise Talisman
+
+          All other files remain byte-for-byte identical to the v3.0.0 source before ZIP recompression. This restores the previous rendering for the other reported items, including armor/tool carriers and oak-plank-related assets.
+
+          Compatibility:
+          - Minecraft Java 1.21.11 through 26.3
+          - Slimefun Legacy 4.1.51+
+
+          SHA-256: $SHA256
+
+          Permanent player download:
+          https://github.com/wickidcow/SFL_RP_Official/releases/latest/download/SlimefunLegacyRP.zip
+          EOF
+
+          gh release create v4.0.1 SlimefunLegacyRP.zip             --title "Slimefun Legacy Resource Pack v4.0.1"             --notes-file release-notes.md             --latest
+
+      - name: Verify published asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3             "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.1/SlimefunLegacyRP.zip"             --output published.zip
+          echo "${{ steps.hash.outputs.sha256 }}  published.zip" | sha256sum --check -
+
+      - name: Update repository baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          sha1 = "${{ steps.hash.outputs.sha1 }}"
+          sha256 = "${{ steps.hash.outputs.sha256 }}"
+          data = {
+              "version": "4.0.1",
+              "filename": "SlimefunLegacyRP.zip",
+              "url": "https://github.com/wickidcow/SFL_RP_Official/releases/download/v4.0.1/SlimefunLegacyRP.zip",
+              "sha1": sha1,
+              "sha256": sha256,
+              "notes": "Scoped 26.3 talisman hotfix based directly on v3.0.0. Only Farmer/Caveman/Wise talisman model JSONs and their Ender variants changed; broad v4.0.0 alias rewrite retired."
+          }
+          Path("BASELINE.json").write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add BASELINE.json
+          git commit -m "release: promote scoped RP v4.0.1 baseline [skip ci]"
+          git push
