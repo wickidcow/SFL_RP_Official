@@ -18,20 +18,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Download published pack generations
+      - name: Download published pack
         shell: bash
         run: |
           set -euo pipefail
           curl --fail --location --retry 3 --retry-delay 2 \
-            "https://github.com/wickidcow/SFL_RP_Official/releases/download/v1.0.1/SlimefunLegacyRP.zip" \
-            --output v1.zip
-          curl --fail --location --retry 3 --retry-delay 2 \
             "https://github.com/wickidcow/SFL_RP_Official/releases/download/v3.0.0/SlimefunLegacyRP.zip" \
-            --output v3.zip
-          unzip -tq v1.zip
-          unzip -tq v3.zip
+            --output pack.zip
+          unzip -tq pack.zip
 
-      - name: Trace affected Emerald model graph
+      - name: Trace talisman model and atlas graph
         shell: bash
         run: |
           set -euo pipefail
@@ -41,13 +37,24 @@ jobs:
           from pathlib import PurePosixPath
 
           TARGETS = {
+              "COMMON_TALISMAN": 2200164,
+              "ANVIL_TALISMAN": 2200165,
+              "MINER_TALISMAN": 2200167,
+              "HUNTER_TALISMAN": 2200169,
+              "LAVA_TALISMAN": 2200171,
+              "WATER_TALISMAN": 2200173,
+              "ANGEL_TALISMAN": 2200175,
+              "FIRE_TALISMAN": 2200177,
+              "MAGICIAN_TALISMAN": 2200179,
+              "TRAVELLER_TALISMAN": 2200181,
+              "WARRIOR_TALISMAN": 2200183,
+              "KNIGHT_TALISMAN": 2200185,
+              "WHIRLWIND_TALISMAN": 2200193,
+              "WIZARD_TALISMAN": 2200195,
               "CAVEMAN_TALISMAN": 2200529,
               "WISE_TALISMAN": 2200531,
               "FARMER_TALISMAN": 2200545,
           }
-
-          def all_json(zf, suffix):
-              return [n for n in zf.namelist() if n.endswith(suffix)]
 
           def load_json(zf, name):
               try:
@@ -64,7 +71,10 @@ jobs:
                   for v in obj:
                       yield from walk(v)
 
-          def model_ref_for_threshold(itemdef, threshold):
+          def locate(zf, suffix):
+              return [n for n in zf.namelist() if n.endswith(suffix)]
+
+          def ref_for_threshold(itemdef, threshold):
               if not isinstance(itemdef, dict):
                   return None
               for node in walk(itemdef):
@@ -78,45 +88,24 @@ jobs:
                           value = float(entry.get("threshold"))
                       except (TypeError, ValueError):
                           continue
-                      if value == float(threshold):
-                          model = entry.get("model")
-                          if isinstance(model, dict):
-                              return model.get("model")
-                          if isinstance(model, str):
-                              return model
+                      if value != float(threshold):
+                          continue
+                      model = entry.get("model")
+                      if isinstance(model, dict):
+                          return model.get("model")
+                      if isinstance(model, str):
+                          return model
               return None
 
-          def locate_itemdefs(zf, item):
-              suffix = f"assets/minecraft/items/{item}.json"
-              return [n for n in zf.namelist() if n.endswith(suffix)]
-
-          def ref_to_model_path(ref):
+          def model_path(ref):
               if not isinstance(ref, str):
                   return None
               ns, path = ref.split(":", 1) if ":" in ref else ("minecraft", ref)
               return f"assets/{ns}/models/{path}.json"
 
-          def alias_candidates(path):
-              p = PurePosixPath(path)
-              parts = list(p.parts)
-              if len(parts) < 4 or parts[0] != "assets":
-                  return []
-              ns = parts[1]
-              rest = "/".join(parts[2:])
-              c = []
-              if ns == "slimefun":
-                  for alias in ("_slimefun", "_b_slimefun"):
-                      c.append(f"assets/{alias}/{rest}")
-              elif ns == "minecraft":
-                  for alias in ("_minecraft", "_b_minecraft"):
-                      c.append(f"assets/{alias}/{rest}")
-              return c
-
-          def model_textures(model_obj, current_ns):
+          def texture_refs(model, current_ns):
               out = []
-              if not isinstance(model_obj, dict):
-                  return out
-              for node in walk(model_obj):
+              for node in walk(model):
                   textures = node.get("textures")
                   if not isinstance(textures, dict):
                       continue
@@ -124,65 +113,67 @@ jobs:
                       if not isinstance(value, str) or value.startswith("#"):
                           continue
                       ns, path = value.split(":", 1) if ":" in value else (current_ns, value)
-                      out.append((value, f"assets/{ns}/textures/{path}.png"))
+                      out.append({
+                          "ref": value,
+                          "namespace": ns,
+                          "logical_path": path,
+                          "file": f"assets/{ns}/textures/{path}.png",
+                      })
               return out
 
-          report = {"targets": {}, "pack_entries": {}}
-          with zipfile.ZipFile("v1.zip") as z1, zipfile.ZipFile("v3.zip") as z3:
-              n1, n3 = set(z1.namelist()), set(z3.namelist())
-              report["pack_entries"]["v1"] = len(n1)
-              report["pack_entries"]["v3"] = len(n3)
-              for item_id, threshold in TARGETS.items():
-                  rec = {"threshold": threshold, "v1": {}, "v3": {}}
-                  for label, zf, names, other_names in (
-                      ("v1", z1, n1, n3),
-                      ("v3", z3, n3, n1),
-                  ):
-                      itemdefs = locate_itemdefs(zf, "emerald")
-                      rec[label]["emerald_itemdefs"] = itemdefs
-                      found = []
-                      for idef in itemdefs:
-                          obj = load_json(zf, idef)
-                          ref = model_ref_for_threshold(obj, threshold)
-                          if not ref:
-                              continue
-                          entry = {"itemdef": idef, "model_ref": ref}
-                          model_path = ref_to_model_path(ref)
-                          entry["model_path"] = model_path
-                          entry["model_exists"] = model_path in names if model_path else False
-                          entry["model_alias_candidates"] = [
-                              p for p in alias_candidates(model_path or "") if p in names
-                          ]
-                          entry["model_other_pack_alias_candidates"] = [
-                              p for p in alias_candidates(model_path or "") if p in other_names
-                          ]
-                          if model_path in names:
-                              model_obj = load_json(zf, model_path)
-                              ns = model_path.split("/", 2)[1]
-                              tex = []
-                              for tref, tpath in model_textures(model_obj, ns):
-                                  tex.append({
-                                      "ref": tref,
-                                      "path": tpath,
-                                      "exists": tpath in names,
-                                      "alias_candidates": [p for p in alias_candidates(tpath) if p in names],
-                                      "other_pack_alias_candidates": [p for p in alias_candidates(tpath) if p in other_names],
-                                  })
-                              entry["textures"] = tex
-                          found.append(entry)
-                      rec[label]["matches"] = found
+          def relevant_atlas_sources(obj):
+              matches = []
+              if not isinstance(obj, dict):
+                  return matches
+              for source in obj.get("sources", []):
+                  if not isinstance(source, dict):
+                      continue
+                  text = json.dumps(source, sort_keys=True)
+                  if "slimefun" in text.lower() or "talisman" in text.lower():
+                      matches.append(source)
+              return matches
 
-                  # Also find obvious talisman-named files for comparison.
-                  needles = {
-                      "caveman": ["caveman_talisman"],
-                      "wise": ["wise_talisman"],
-                      "farmer": ["farmer_talisman"],
+          report = {}
+          with zipfile.ZipFile("pack.zip") as zf:
+              names = set(zf.namelist())
+              report["entry_count"] = len(names)
+              report["pack_mcmeta"] = load_json(zf, "pack.mcmeta")
+              report["emerald_itemdefs"] = locate(zf, "assets/minecraft/items/emerald.json")
+              report["items_atlases"] = {}
+              for path in locate(zf, "assets/minecraft/atlases/items.json"):
+                  obj = load_json(zf, path)
+                  report["items_atlases"][path] = {
+                      "all_sources": obj.get("sources", []) if isinstance(obj, dict) else None,
+                      "slimefun_or_talisman_sources": relevant_atlas_sources(obj),
                   }
-                  key = item_id.split("_", 1)[0].lower()
-                  needle = needles.get(key, [])
-                  rec["v1"]["named_files"] = [n for n in sorted(n1) if any(x in n.lower() for x in needle)]
-                  rec["v3"]["named_files"] = [n for n in sorted(n3) if any(x in n.lower() for x in needle)]
-                  report["targets"][item_id] = rec
+
+              report["targets"] = {}
+              for item_id, threshold in TARGETS.items():
+                  matches = []
+                  for idef in report["emerald_itemdefs"]:
+                      obj = load_json(zf, idef)
+                      ref = ref_for_threshold(obj, threshold)
+                      if not ref:
+                          continue
+                      mp = model_path(ref)
+                      rec = {
+                          "itemdef": idef,
+                          "threshold": threshold,
+                          "model_ref": ref,
+                          "model_file": mp,
+                          "model_exists": mp in names if mp else False,
+                      }
+                      if mp in names:
+                          mo = load_json(zf, mp)
+                          ns = mp.split("/", 2)[1]
+                          textures = texture_refs(mo, ns)
+                          for tex in textures:
+                              tex["exists"] = tex["file"] in names
+                              # Is this texture under the default item-atlas directory?
+                              tex["under_default_item_dir"] = tex["logical_path"].startswith("item/")
+                          rec["textures"] = textures
+                      matches.append(rec)
+                  report["targets"][item_id] = matches
 
           with open("diagnostics/talisman-pack-report.json", "w", encoding="utf-8") as fh:
               json.dump(report, fh, indent=2, sort_keys=True)
@@ -200,5 +191,5 @@ jobs:
             echo "Diagnostic report unchanged."
             exit 0
           fi
-          git commit -m "diagnostics: trace broken talisman resource models [skip ci]"
+          git commit -m "diagnostics: inspect talisman atlas coverage [skip ci]"
           git push
