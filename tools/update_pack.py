@@ -45,7 +45,16 @@ def deletion_entries(delete_list: Path | None) -> list[str]:
 def override_files(overrides: Path | None) -> list[Path]:
     if overrides is None or not overrides.exists():
         return []
-    return sorted(path for path in overrides.rglob("*") if path.is_file())
+
+    # Repository documentation belongs beside the override tree, not inside the
+    # generated resource pack. Keeping README.md out also preserves byte-for-byte
+    # no-op reproduction of the tested baseline.
+    ignored = {"README.md", ".gitkeep"}
+    return sorted(
+        path
+        for path in overrides.rglob("*")
+        if path.is_file() and path.relative_to(overrides).as_posix() not in ignored
+    )
 
 
 def apply_deletions(root: Path, entries: list[str]) -> None:
